@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+  <h2>Upload Fonts</h2>
+  <form action="/upload" method="post" enctype="multipart/form-data">
+    <input type="file" name="files" multiple accept=".otf,.ttf" required>
+    <br>
+    <button type="submit" class="btn">Upload &amp; Convert</button>
+  </form>
+  <p class="muted">Drop OTF or TTF files. They will be converted to subsetted WOFF2 and indexed automatically.</p>
+</div>
+
+<h2>Font Families</h2>
+{% if families %}
+  {% for fam in families %}
+  <div class="card">
+    <h3><a href="/font/{{ fam.name }}">{{ fam.name }}</a></h3>
+    <p>
+      {% for w in fam.weights %}
+        <span class="tag">{{ w }}</span>
+      {% endfor %}
+      {% for s in fam.styles %}
+        <span class="tag">{{ s }}</span>
+      {% endfor %}
+    </p>
+    <p class="muted">Preview and copy CSS on the detail page.</p>
+  </div>
+  {% endfor %}
+{% else %}
+  <p class="muted">No fonts uploaded yet.</p>
+{% endif %}
+{% endblock %}

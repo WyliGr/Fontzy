@@ -1,0 +1,14 @@
+services:
+  fontzy:
+    build: .
+    container_name: fontzy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./fonts:/app/fonts
+      - ./font-metadata.json:/app/font-metadata.json
+    environment:
+      - FONTZY_INCOMING_DIR=/app/fonts/incoming
+      - FONTZY_SERVED_DIR=/app/fonts/served
+      - FONTZY_METADATA_FILE=/app/font-metadata.json
+    restart: unless-stopped

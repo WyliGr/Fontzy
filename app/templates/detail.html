@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block head %}
+<link rel="stylesheet" href="/api/font?family={{ family }}">
+{% endblock %}
+
+{% block content %}
+<h2>{{ family }}</h2>
+
+<div class="card">
+  <h3>@import URL</h3>
+  <pre><code>@import url('{{ request.base_url }}api/font?family={{ family }}');</code></pre>
+  <p class="muted">Add this to your CSS to use the font everywhere.</p>
+</div>
+
+<div class="card">
+  <h3>Preview</h3>
+  <p style="font-family: '{{ family }}', sans-serif; font-size: 28px;">
+    The quick brown fox jumps over the lazy dog.
+  </p>
+  <p style="font-family: '{{ family }}', sans-serif; font-size: 18px;">
+    ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789
+  </p>
+</div>
+
+<div class="card">
+  <h3>Available Weights &amp; Styles</h3>
+  {% for w, styles in weights.items() %}
+    <p>
+      <strong>Weight {{ w }}</strong>
+      {% for s, info in styles.items() %}
+        <span class="tag">{{ s }}</span>
+        <span class="muted">{{ info.path }}</span>
+      {% endfor %}
+    </p>
+  {% endfor %}
+</div>
+
+<p><a href="/">&larr; Back to families</a></p>
+{% endblock %}

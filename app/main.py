@@ -1,0 +1,43 @@
+"""FastAPI application entry point."""
+
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
+from app.config import SERVED_DIR
+from app.router_api import router as api_router
+from app.router_ui import router as ui_router
+
+app = FastAPI(title="Fontzy", description="Self-hosted font serving system")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(api_router)
+app.include_router(ui_router)
+
+# Serve converted font files with long-term caching
+static_app = StaticFiles(directory=str(SERVED_DIR))
+
+@app.get("/fonts/{family}/{file_name}")
+async def serve_font(family: str, file_name: str):
+    file_path = SERVED_DIR / family / file_name
+    if not file_path.is_file():
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Font file not found")
+    return FileResponse(
+        str(file_path),
+        headers={
+            "Cache-Control": "public, max-age=31536000, immutable",
+            "Access-Control-Allow-Origin": "*",
+        },
+    )
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

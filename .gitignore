@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.env
+fonts/incoming/*
+fonts/served/*
+!fonts/incoming/.gitkeep
+!fonts/served/.gitkeep
+font-metadata.json
