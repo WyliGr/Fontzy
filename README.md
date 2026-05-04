@@ -1,27 +1,52 @@
-# Fontzy
+![Fontzy Banner](assets/banner.png)
 
-Self-hosted font serving system that replicates the convenience of Google Fonts for fonts you own and host yourself.
+**Self-hosted font serving that feels like Google Fonts — but the fonts are yours.**
+
+Upload your OTF/TTF files. Get a WOFF2-converted, subset-optimized, cache-busted `@import` URL. Host everything yourself.
+
+![Fontzy Screenshot](assets/screenshot.png)
+
+---
 
 ## What it does
 
-1. **Upload** your OTF or TTF font files via the web UI or API
-2. **Convert** them automatically to WOFF2 (compressed web format) with Latin subsetting
-3. **Host** the converted files on your own server
-4. **Serve** `@font-face` CSS on demand via a simple URL
+| Google Fonts | Fontzy |
+|--------------|--------|
+| Pulls from Google's CDN | Serves **your** font files |
+| Tracks visitors | **Zero** external requests |
+| Limited to Google catalog | Any OTF/TTF you own |
+| No control over subsetting | Latin-subset WOFF2 by default |
+
+Fontzy replicates the *developer experience* of Google Fonts (`@import url(...)`) while giving you full control over the files, performance, and privacy.
+
+---
+
+## Features
+
+- **Drag & drop upload** — Drop `.otf` or `.ttf` files on the dashboard. Done.
+- **Auto-conversion to WOFF2** — Uses `fonttools` + `brotli`. ~60% smaller files.
+- **Latin subsetting** — Strips unused glyphs. Even smaller.
+- **CSS on demand** — `GET /api/font?family=YourFont` returns `@font-face` rules.
+- **Weight/style filtering** — Request only the variants you need.
+- **Immutable caching** — Font files cached for 1 year. CSS cached for 1 hour.
+- **Beautiful dashboard** — Live font previews, size stats, copy-paste URLs.
+- **Docker ready** — One command to run.
+
+---
 
 ## Quick Start
 
-### With Docker
+### Docker (recommended)
 
 ```bash
-docker compose up --build
+git clone https://github.com/yourusername/fontzy.git
+cd fontzy
+docker compose up --build -d
 ```
 
-Then open http://localhost:8000
+Open **http://localhost:8000**
 
-### With Python (local development)
-
-Requires Python 3.12+.
+### Local (Python 3.12+)
 
 ```bash
 # Install dependencies
@@ -29,70 +54,112 @@ uv venv --python 3.12
 source .venv/bin/activate
 uv pip install -e .
 
-# Start the server
+# Start server
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Or with uv directly:
-
-```bash
-uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
+---
 
 ## Usage
 
-### Upload fonts
+### 1. Upload a font
 
-Via the web UI at `/`, or via API:
+Drag a `.ttf` or `.otf` onto the dashboard, or use the API:
 
 ```bash
 curl -X POST -F "files=@YourFont.ttf" http://localhost:8000/api/upload
 ```
 
-### Use in your website
+### 2. Copy the CSS import
+
+Click **Copy CSS** on any font card, or construct the URL yourself:
 
 ```css
-@import url('http://your-server.com/api/font?family=your-font');
+@import url('http://localhost:8000/api/font?family=your-font');
+```
+
+### 3. Use it
+
+```css
+@import url('http://localhost:8000/api/font?family=your-font');
 
 body {
   font-family: 'your-font', sans-serif;
 }
 ```
 
-### Request specific weights or styles
+### 4. Request specific weights
 
 ```css
-@import url('http://your-server.com/api/font?family=your-font&weight=400,700');
+@import url('http://localhost:8000/api/font?family=your-font&weight=400,700');
 ```
 
-## API Endpoints
+---
+
+## API Reference
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/` | GET | Web UI — browse and upload fonts |
-| `/api/font` | GET | Serve `@font-face` CSS for a family |
-| `/api/upload` | POST | Upload OTF/TTF files |
-| `/api/families` | GET | List all font families |
-| `/api/font/{family}` | DELETE | Delete a font family |
-| `/fonts/{family}/{file}` | GET | Serve WOFF2 font files (cached for 1 year) |
+| `/` | GET | Dashboard — upload, browse, preview |
+| `/api/font` | GET | `@font-face` CSS. Query: `family`, `weight`, `style` |
+| `/api/upload` | POST | Upload `.otf`/`.ttf` files (multipart) |
+| `/api/families` | GET | List all indexed font families |
+| `/api/font/{family}` | DELETE | Remove a family and its files |
+| `/fonts/{family}/{file}` | GET | Raw WOFF2 file (immutable cache) |
+| `/assets/*` | GET | Static assets (favicon, logo) |
 
-## Architecture
+---
 
-- **FastAPI** — API server
-- **fonttools** + **brotli** — WOFF2 conversion and subsetting
-- **Jinja2** — Minimal web UI templates
-- **Docker** — Containerized deployment
+## Configuration
 
-## Subsetting
+All paths are configurable via environment variables:
 
-By default, fonts are subset to the **Latin** character set, which covers most Western European languages. This significantly reduces file size. Additional subsets (Latin Extended, Cyrillic, Greek) can be added in `app/config.py`.
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `FONTZY_INCOMING_DIR` | `./fonts/incoming` | Upload staging |
+| `FONTZY_SERVED_DIR` | `./fonts/served` | Converted WOFF2 output |
+| `FONTZY_METADATA_FILE` | `./font-metadata.json` | Font index |
 
-## Caching
+Subsets are defined in `app/config.py`. Default is **Latin** (~300 glyphs). Add `latin-ext`, `cyrillic`, or `greek` as needed.
 
-- **CSS responses** — cached for 1 hour
-- **Font files** — cached with `immutable` directive for 1 year (content-addressed)
+---
+
+## Docker Compose
+
+```yaml
+services:
+  fontzy:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./fonts:/app/fonts
+      - ./font-metadata.json:/app/font-metadata.json
+    environment:
+      - FONTZY_INCOMING_DIR=/app/fonts/incoming
+      - FONTZY_SERVED_DIR=/app/fonts/served
+    restart: unless-stopped
+```
+
+Volumes ensure your fonts and index persist across container restarts.
+
+---
 
 ## Notes
 
-- Font licensing is your responsibility. Only upload fonts you have the right to use.
-- This is designed for single sites or small deployments. For high-traffic global use, add a CDN in front.
+- **Licensing is your responsibility.** Only upload fonts you have the right to use.
+- Designed for single sites or small deployments. For high-traffic global use, add a CDN in front.
+- Font metadata is parsed from the font's `name` table. Some fonts may need manual name cleanup.
+
+---
+
+## License
+
+This project is open source and under the "Good Luck With That" License.
+
+---
+
+## AI Usage
+
+I didn't 'Vibe code' this project. I've made it.
+This project have been made with my own hands assisted with AI. It's my copilot. It helped me plan the project, chose the techical stack and debug horrible bugs.
