@@ -8,3 +8,4 @@ fonts/served/*
 !fonts/incoming/.gitkeep
 !fonts/served/.gitkeep
 font-metadata.json
+.venv
