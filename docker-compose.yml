@@ -3,7 +3,7 @@ services:
     build: .
     container_name: fontzy
     ports:
-      - "8000:8000"
+      - "6000:8000"
     volumes:
       - ./fonts:/app/fonts
       - ./font-metadata.json:/app/font-metadata.json
