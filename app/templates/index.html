@@ -1,5 +1,12 @@
 {% extends "base.html" %}
 
+{% block head %}
+  {% for fam in families %}
+  <link rel="preload" href="/api/font?family={{ fam.name }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="/api/font?family={{ fam.name }}"></noscript>
+  {% endfor %}
+{% endblock %}
+
 {% block content %}
 
 <!-- Upload Section -->
@@ -95,7 +102,7 @@
             <span class="text-success">-{{ fam.savings }}%</span>
           </div>
           <div style="height: 4px; background: var(--surface-active); border-radius: 2px; overflow: hidden;">
-            <div style="width: {{ fam.savings }}%; height: 100%; background: linear-gradient(90deg, var(--success), var(--accent)); border-radius: 2px; transition: width 1s ease;"></div>
+            <div style="width: {{ fam.savings }}%; height: 100%; background: linear-gradient(90deg, var(--text-dim), var(--text-muted)); border-radius: 2px; transition: width 1s ease;"></div>
           </div>
         </div>
       </div>

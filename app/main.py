@@ -1,5 +1,6 @@
 """FastAPI application entry point."""
 
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -19,6 +20,10 @@ app.add_middleware(
 
 app.include_router(api_router)
 app.include_router(ui_router)
+
+# Serve static assets (favicon, logo)
+ASSETS_DIR = Path(__file__).parent / "assets"
+app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
 
 # Serve converted font files with long-term caching
 static_app = StaticFiles(directory=str(SERVED_DIR))
