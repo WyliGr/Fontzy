@@ -33,6 +33,7 @@ Fontzy replicates the *developer experience* of Google Fonts (`@import url(...)`
 - **Immutable caching** — Font files cached for 1 year. CSS cached for 1 hour.
 - **Beautiful dashboard** — Live font previews, size stats, copy-paste URLs.
 - **Docker ready** — One command to run.
+- **Custom domain support** — Configure a public base URL for use behind a reverse proxy or tunnel.
 
 ---
 
@@ -109,6 +110,8 @@ body {
 | `/api/font/{family}` | DELETE | Remove a family and its files |
 | `/fonts/{family}/{file}` | GET | Raw WOFF2 file (immutable cache) |
 | `/assets/*` | GET | Static assets (favicon, logo) |
+| `/api/settings` | GET | Read current base URL |
+| `/api/settings` | POST | Update base URL (`{"base_url": "..."}`) |
 
 ---
 
@@ -120,9 +123,44 @@ All paths are configurable via environment variables:
 |----------|---------|-------------|
 | `FONTZY_INCOMING_DIR` | `./fonts/incoming` | Upload staging |
 | `FONTZY_SERVED_DIR` | `./fonts/served` | Converted WOFF2 output |
-| `FONTZY_METADATA_FILE` | `./font-metadata.json` | Font index |
+| `FONTZY_SETTINGS_FILE` | `./fontzy-settings.json` | App settings (base URL) |
 
 Subsets are defined in `app/config.py`. Default is **Latin** (~300 glyphs). Add `latin-ext`, `cyrillic`, or `greek` as needed.
+
+---
+
+## Using Behind a Reverse Proxy or Tunnel
+
+Fontzy supports configuring a custom base URL so that all generated `@import` URLs point to your public domain.
+
+### Via the Dashboard
+
+1. Open Fontzy in your browser
+2. Click the **⚙️ Settings** button in the header
+3. Enter your public URL (e.g., `https://fonts.example.com`)
+4. Click **Save**
+
+All CSS imports, font file references, and copy-paste URLs will use this domain.
+
+### Via the API
+
+```bash
+# Set base URL
+curl -X POST http://localhost:8000/api/settings \
+  -H "Content-Type: application/json" \
+  -d '{"base_url": "https://fonts.example.com"}'
+
+# Verify
+curl http://localhost:8000/api/settings
+# → {"base_url":"https://fonts.example.com"}
+```
+
+### How it works
+
+- **Auto-detect** — If no base URL is configured, Fontzy derives it from the incoming request (e.g., `http://localhost:8000`)
+- **Manual override** — Setting a base URL forces all generated URLs to use that domain
+- **Persistence** — Saved to `fontzy-settings.json`, persists across container restarts
+- **Impact** — Dashboard copy buttons, detail page CSS blocks, and `@font-face` font file URLs all use the configured domain
 
 ---
 
@@ -143,7 +181,7 @@ services:
     restart: unless-stopped
 ```
 
-Volumes ensure your fonts and index persist across container restarts.
+Volumes ensure your fonts, index, and settings persist across container restarts.
 
 ---
 
