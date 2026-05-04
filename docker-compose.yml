@@ -6,7 +6,7 @@ services:
       - "6000:8000"
     volumes:
       - ./fonts:/app/fonts
-      - ./font-metadata.json:/app/font-metadata.json
+      - ./data:/app/data
     environment:
       - FONTZY_INCOMING_DIR=/app/fonts/incoming
       - FONTZY_SERVED_DIR=/app/fonts/served

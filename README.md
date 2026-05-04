@@ -42,24 +42,12 @@ Fontzy replicates the *developer experience* of Google Fonts (`@import url(...)`
 ### Docker (recommended)
 
 ```bash
-git clone https://github.com/yourusername/fontzy.git
+git clone https://github.com/WyliGr/fontzy.git
 cd fontzy
 docker compose up --build -d
 ```
 
-Open **http://localhost:8000**
-
-### Local (Python 3.12+)
-
-```bash
-# Install dependencies
-uv venv --python 3.12
-source .venv/bin/activate
-uv pip install -e .
-
-# Start server
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
+Open **http://localhost:6000**
 
 ---
 
@@ -70,7 +58,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 Drag a `.ttf` or `.otf` onto the dashboard, or use the API:
 
 ```bash
-curl -X POST -F "files=@YourFont.ttf" http://localhost:8000/api/upload
+curl -X POST -F "files=@YourFont.ttf" http://localhost:6000/api/upload
 ```
 
 ### 2. Copy the CSS import
@@ -78,13 +66,13 @@ curl -X POST -F "files=@YourFont.ttf" http://localhost:8000/api/upload
 Click **Copy CSS** on any font card, or construct the URL yourself:
 
 ```css
-@import url('http://localhost:8000/api/font?family=your-font');
+@import url('http://localhost:6000/api/font?family=your-font');
 ```
 
 ### 3. Use it
 
 ```css
-@import url('http://localhost:8000/api/font?family=your-font');
+@import url('http://localhost:6000/api/font?family=your-font');
 
 body {
   font-family: 'your-font', sans-serif;
@@ -94,7 +82,7 @@ body {
 ### 4. Request specific weights
 
 ```css
-@import url('http://localhost:8000/api/font?family=your-font&weight=400,700');
+@import url('http://localhost:6000/api/font?family=your-font&weight=400,700');
 ```
 
 ---
@@ -146,18 +134,18 @@ All CSS imports, font file references, and copy-paste URLs will use this domain.
 
 ```bash
 # Set base URL
-curl -X POST http://localhost:8000/api/settings \
+curl -X POST http://localhost:6000/api/settings \
   -H "Content-Type: application/json" \
   -d '{"base_url": "https://fonts.example.com"}'
 
 # Verify
-curl http://localhost:8000/api/settings
+curl http://localhost:6000/api/settings
 # → {"base_url":"https://fonts.example.com"}
 ```
 
 ### How it works
 
-- **Auto-detect** — If no base URL is configured, Fontzy derives it from the incoming request (e.g., `http://localhost:8000`)
+- **Auto-detect** — If no base URL is configured, Fontzy derives it from the incoming request (e.g., `http://localhost:6000`)
 - **Manual override** — Setting a base URL forces all generated URLs to use that domain
 - **Persistence** — Saved to `fontzy-settings.json`, persists across container restarts
 - **Impact** — Dashboard copy buttons, detail page CSS blocks, and `@font-face` font file URLs all use the configured domain
@@ -170,15 +158,18 @@ curl http://localhost:8000/api/settings
 services:
   fontzy:
     build: .
+    container_name: fontzy
     ports:
-      - "8000:8000"
+      - "6000:8000"
     volumes:
       - ./fonts:/app/fonts
-      - ./font-metadata.json:/app/font-metadata.json
+      - ./data:/app/data
     environment:
       - FONTZY_INCOMING_DIR=/app/fonts/incoming
       - FONTZY_SERVED_DIR=/app/fonts/served
+      - FONTZY_METADATA_FILE=/app/font-metadata.json
     restart: unless-stopped
+
 ```
 
 Volumes ensure your fonts, index, and settings persist across container restarts.
