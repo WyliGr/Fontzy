@@ -13,7 +13,9 @@
 <div class="card" style="margin-bottom: 32px;">
   <div class="upload-zone" id="upload-zone">
     <input type="file" name="files" id="file-input" multiple accept=".otf,.ttf" required>
-    <div class="upload-zone-icon">&#8682;</div>
+  <div class="upload-zone-icon">
+      <img src="/assets/upload.svg" alt="" class="icon icon-xl" style="">
+    </div>
     <div class="upload-zone-title">Drop font files here</div>
     <div class="upload-zone-hint">
       or click to browse &middot; OTF and TTF supported &middot; auto-converted to WOFF2
@@ -26,28 +28,28 @@
 <!-- Stats Bar -->
 <div class="stats-bar animate-in">
   <div class="stat-card">
-    <div class="stat-icon blue">&#9729;</div>
+    <div class="stat-icon blue"><img src="/assets/cloud.svg" alt="" class="icon icon-lg"></div>
     <div>
       <div class="stat-value">{{ total_families }}</div>
       <div class="stat-label">Font Families</div>
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon purple">&#9813;</div>
+    <div class="stat-icon purple"><img src="/assets/variant.svg" alt="" class="icon icon-lg"></div>
     <div>
       <div class="stat-value">{{ families | sum(attribute='variants') }}</div>
       <div class="stat-label">Total Variants</div>
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon orange">&#9733;</div>
+    <div class="stat-icon orange"><img src="/assets/weight.svg" alt="" class="icon icon-lg"></div>
     <div>
       <div class="stat-value">{{ total_source }}</div>
       <div class="stat-label">Original Size</div>
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon green">&#9734;</div>
+    <div class="stat-icon green"><img src="/assets/resize.svg" alt="" class="icon icon-lg"></div>
     <div>
       <div class="stat-value">{{ total_converted }}</div>
       <div class="stat-label">Converted Size</div>
@@ -66,7 +68,7 @@
   <div class="family-card animate-in" style="animation-delay: {{ loop.index0 * 0.05 }}s">
     
     <button class="family-card-delete" onclick="deleteFont('{{ fam.name }}', this)" title="Delete font">
-      &#10005;
+      <img src="/assets/trash.svg" alt="Delete" class="icon icon-sm">
     </button>
 
     <!-- Live Preview -->
@@ -108,9 +110,11 @@
       </div>
 
       <div class="family-card-actions">
-        <a href="/font/{{ fam.name }}" class="btn btn-ghost btn-sm">&#128065; Preview</a>
+        <a href="/font/{{ fam.name }}" class="btn btn-ghost btn-sm">
+          <img src="/assets/resize.svg" alt="" class="icon icon-sm" style=""> Preview
+        </a>
         <button class="btn btn-primary btn-sm" onclick="copyText('@import url(\'{{ base_url }}/api/font?family={{ fam.name }}\');', this)">
-          &#128203; Copy CSS
+          <img src="/assets/copy.svg" alt="" class="icon icon-sm" style=""> Copy CSS
         </button>
       </div>
     </div>
@@ -122,7 +126,9 @@
 
 <!-- Empty State -->
 <div class="empty-state animate-in">
-  <div class="empty-state-icon">&#128248;</div>
+  <div class="empty-state-icon">
+    <img src="/assets/empty.svg" alt="" class="icon icon-xl" style="">
+  </div>
   <h2>No fonts yet</h2>
   <p>Upload your first OTF or TTF font file above. It will be automatically converted to WOFF2 and ready to serve.</p>
 </div>

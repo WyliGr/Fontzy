@@ -10,7 +10,9 @@
 
 <!-- Back Link -->
 <div style="margin-bottom: 20px;">
-  <a href="/" class="btn btn-ghost btn-sm">&#8592; Back to dashboard</a>
+  <a href="/" class="btn btn-ghost btn-sm">
+    <img src="/assets/resize.svg" alt="" class="icon icon-sm" style="transform: rotate(-135deg);"> Back to dashboard
+  </a>
 </div>
 
 <!-- Hero Preview -->
@@ -68,7 +70,7 @@
 <!-- CSS Import -->
 <div class="card" style="margin-bottom: 24px;">
   <div class="section-header" style="margin-bottom: 12px;">
-    <h3>&#128203; CSS @import</h3>
+    <h3><img src="/assets/copy.svg" alt="" class="icon icon-sm" style="vertical-align: middle; margin-right: 6px;"> CSS @import</h3>
     <span class="text-muted" style="font-size: 13px;">Paste this into your stylesheet</span>
   </div>
 
@@ -98,7 +100,7 @@ body {
 <!-- Variants Table -->
 <div class="card" style="margin-bottom: 24px;">
   <div class="section-header" style="margin-bottom: 12px;">
-    <h3>&#128449; Font Variants</h3>
+    <h3><img src="/assets/variant.svg" alt="" class="icon icon-sm" style="vertical-align: middle; margin-right: 6px;"> Font Variants</h3>
     <span class="text-muted" style="font-size: 13px;">Details for each weight and style</span>
   </div>
 
@@ -148,11 +150,13 @@ body {
 <div class="card" style="border-color: var(--danger-dim);">
   <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
     <div>
-      <h3 style="color: var(--danger); margin-bottom: 4px;">&#9888; Danger Zone</h3>
+      <h3 style="color: var(--danger); margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+        <img src="/assets/caution.svg" alt="" class="icon icon-sm" style=""> Danger Zone
+      </h3>
       <p class="text-muted" style="font-size: 13px;">Deleting a font family removes all its variants permanently.</p>
     </div>
     <button class="btn btn-danger" onclick="deleteFont('{{ family }}', this); window.location.href='/';">
-      &#128465; Delete "{{ family }}"
+      <img src="/assets/trash.svg" alt="" class="icon icon-sm" style=""> Delete "{{ family }}"
     </button>
   </div>
 </div>
