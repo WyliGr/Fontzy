@@ -1,5 +1,7 @@
 ![Fontzy Banner](assets/banner.png)
 
+## What is Fontzy ?
+
 **Self-hosted font serving that feels like Google Fonts — but the fonts are yours.**
 
 Upload your OTF/TTF files. Get a WOFF2-converted, subset-optimized, cache-busted `@import` URL. Host everything yourself.
