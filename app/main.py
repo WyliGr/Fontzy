@@ -5,9 +5,15 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from app.config import SERVED_DIR
+from app.config import SERVED_DIR, INCOMING_DIR, METADATA_FILE, SETTINGS_FILE
 from app.router_api import router as api_router
 from app.router_ui import router as ui_router
+
+# Ensure directories exist at startup
+SERVED_DIR.mkdir(parents=True, exist_ok=True)
+INCOMING_DIR.mkdir(parents=True, exist_ok=True)
+METADATA_FILE.parent.mkdir(parents=True, exist_ok=True)
+SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="Fontzy", description="Self-hosted font serving system")
 
