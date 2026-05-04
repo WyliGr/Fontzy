@@ -1,40 +1,201 @@
 {% extends "base.html" %}
 
+{% block title %}{{ family }} | Fontzy{% endblock %}
+
 {% block head %}
 <link rel="stylesheet" href="/api/font?family={{ family }}">
 {% endblock %}
 
 {% block content %}
-<h2>{{ family }}</h2>
 
-<div class="card">
-  <h3>@import URL</h3>
-  <pre><code>@import url('{{ request.base_url }}api/font?family={{ family }}');</code></pre>
-  <p class="muted">Add this to your CSS to use the font everywhere.</p>
+<!-- Back Link -->
+<div style="margin-bottom: 20px;">
+  <a href="/" class="btn btn-ghost btn-sm">&#8592; Back to dashboard</a>
 </div>
 
-<div class="card">
-  <h3>Preview</h3>
-  <p style="font-family: '{{ family }}', sans-serif; font-size: 28px;">
-    The quick brown fox jumps over the lazy dog.
-  </p>
-  <p style="font-family: '{{ family }}', sans-serif; font-size: 18px;">
-    ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789
-  </p>
-</div>
-
-<div class="card">
-  <h3>Available Weights &amp; Styles</h3>
-  {% for w, styles in weights.items() %}
-    <p>
-      <strong>Weight {{ w }}</strong>
-      {% for s, info in styles.items() %}
-        <span class="tag">{{ s }}</span>
-        <span class="muted">{{ info.path }}</span>
+<!-- Hero Preview -->
+<div class="preview-section">
+  <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+    <h1 style="font-family: '{{ family }}', sans-serif; margin-bottom: 0; font-size: 48px;">{{ family }}</h1>
+    <div class="family-card-meta" style="margin-bottom: 0;">
+      {% for v in variants %}
+        <span class="tag">{{ v.weight }}</span>
       {% endfor %}
-    </p>
-  {% endfor %}
+      {% for s in weights.keys() | list | first | default('') %}
+        {# handled above #}
+      {% endfor %}
+      <span class="tag accent">{{ variants | length }} variant{{ 's' if variants | length > 1 else '' }}</span>
+    </div>
+  </div>
+
+  <!-- Editable Preview -->
+  <textarea
+    class="preview-editor"
+    id="preview-text"
+    placeholder="Type to preview the font..."
+    spellcheck="false"
+  >The quick brown fox jumps over the lazy dog.</textarea>
+
+  <!-- Weight Selector -->
+  <div class="preview-weights" id="weight-selector">
+    {% for v in variants %}
+    <button
+      class="weight-pill {{ 'active' if loop.first else '' }}"
+      data-weight="{{ v.weight }}"
+      data-style="{{ v.style }}"
+      onclick="setWeight({{ v.weight }}, '{{ v.style }}', this)"
+    >
+      {{ v.weight }} {{ v.style }}
+    </button>
+    {% endfor %}
+  </div>
+
+  <!-- Size Slider -->
+  <div style="display: flex; align-items: center; gap: 12px; margin-top: 16px;">
+    <span class="text-dim" style="font-size: 13px;">Size:</span>
+    <input
+      type="range"
+      id="size-slider"
+      min="12"
+      max="120"
+      value="40"
+      style="flex: 1; accent-color: var(--accent);"
+    >
+    <span id="size-value" class="text-dim" style="font-size: 13px; min-width: 40px; text-align: right;">40px</span>
+  </div>
 </div>
 
-<p><a href="/">&larr; Back to families</a></p>
+<!-- CSS Import -->
+<div class="card" style="margin-bottom: 24px;">
+  <div class="section-header" style="margin-bottom: 12px;">
+    <h3>&#128203; CSS @import</h3>
+    <span class="text-muted" style="font-size: 13px;">Paste this into your stylesheet</span>
+  </div>
+
+  <div class="code-block">
+    <pre>@import url('{{ request.base_url }}api/font?family={{ family }}');
+
+body {
+  font-family: '{{ family }}', sans-serif;
+}</pre>
+    <button class="copy-btn" onclick="copyText(this.closest('.code-block').querySelector('pre').textContent, this)">Copy</button>
+  </div>
+
+  <div style="margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
+    <span class="text-muted" style="font-size: 13px;">Specific weight:</span>
+    {% for v in variants %}
+    <button
+      class="tag"
+      style="cursor: pointer;"
+      onclick="copyText('@import url(\'{{ request.base_url }}api/font?family={{ family }}&weight={{ v.weight }}\');', this); this.textContent='Copied!'; setTimeout(()=>this.textContent='{{ v.weight }} {{ v.style }}', 1500);"
+    >
+      {{ v.weight }} {{ v.style }}
+    </button>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Variants Table -->
+<div class="card" style="margin-bottom: 24px;">
+  <div class="section-header" style="margin-bottom: 12px;">
+    <h3>&#128449; Font Variants</h3>
+    <span class="text-muted" style="font-size: 13px;">Details for each weight and style</span>
+  </div>
+
+  <div style="overflow-x: auto;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Weight</th>
+          <th>Style</th>
+          <th>File</th>
+          <th>Original</th>
+          <th>Converted</th>
+          <th>Savings</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in variants %}
+        <tr>
+          <td>{{ v.weight }}</td>
+          <td>
+            <span class="tag" style="{% if v.style == 'italic' %}background: var(--warning); color: var(--bg); border-color: var(--warning);{% endif %}">
+              {{ v.style }}
+            </span>
+          </td>
+          <td>
+            <span class="text-dim" style="font-size: 12px; font-family: 'JetBrains Mono', monospace;">{{ v.path }}</span>
+          </td>
+          <td class="text-muted">{{ v.source_size }}</td>
+          <td class="text-muted">{{ v.converted_size }}</td>
+          <td>
+            {% if v.source_size != v.converted_size %}
+              <span class="text-success">
+                -{{ ((v.source_size_bytes|default(1) - v.converted_size_bytes|default(0)) / v.source_size_bytes|default(1) * 100) | round }}%
+              </span>
+            {% else %}
+              <span class="text-muted">-</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Delete -->
+<div class="card" style="border-color: var(--danger-dim);">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+    <div>
+      <h3 style="color: var(--danger); margin-bottom: 4px;">&#9888; Danger Zone</h3>
+      <p class="text-muted" style="font-size: 13px;">Deleting a font family removes all its variants permanently.</p>
+    </div>
+    <button class="btn btn-danger" onclick="deleteFont('{{ family }}', this); window.location.href='/';">
+      &#128465; Delete "{{ family }}"
+    </button>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const previewText = document.getElementById('preview-text');
+  const sizeSlider = document.getElementById('size-slider');
+  const sizeValue = document.getElementById('size-value');
+  let currentWeight = {{ variants[0].weight if variants else 400 }};
+  let currentStyle = '{{ variants[0].style if variants else "normal" }}';
+
+  // Weight switching
+  function setWeight(weight, style, btn) {
+    currentWeight = weight;
+    currentStyle = style;
+    previewText.style.fontWeight = weight;
+    previewText.style.fontStyle = style;
+
+    document.querySelectorAll('.weight-pill').forEach(pill => {
+      pill.classList.remove('active');
+    });
+    btn.classList.add('active');
+  }
+
+  // Size slider
+  sizeSlider.addEventListener('input', (e) => {
+    const size = e.target.value;
+    previewText.style.fontSize = size + 'px';
+    sizeValue.textContent = size + 'px';
+  });
+
+  // Auto-resize textarea
+  previewText.addEventListener('input', () => {
+    previewText.style.height = 'auto';
+    previewText.style.height = previewText.scrollHeight + 'px';
+  });
+
+  // Initialize
+  previewText.style.fontFamily = "'{{ family }}', sans-serif";
+  previewText.style.fontWeight = currentWeight;
+  previewText.style.fontStyle = currentStyle;
+</script>
 {% endblock %}

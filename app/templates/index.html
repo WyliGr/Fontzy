@@ -1,33 +1,198 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="card">
-  <h2>Upload Fonts</h2>
-  <form action="/upload" method="post" enctype="multipart/form-data">
-    <input type="file" name="files" multiple accept=".otf,.ttf" required>
-    <br>
-    <button type="submit" class="btn">Upload &amp; Convert</button>
-  </form>
-  <p class="muted">Drop OTF or TTF files. They will be converted to subsetted WOFF2 and indexed automatically.</p>
+
+<!-- Upload Section -->
+<div class="card" style="margin-bottom: 32px;">
+  <div class="upload-zone" id="upload-zone">
+    <input type="file" name="files" id="file-input" multiple accept=".otf,.ttf" required>
+    <div class="upload-zone-icon">&#8682;</div>
+    <div class="upload-zone-title">Drop font files here</div>
+    <div class="upload-zone-hint">
+      or click to browse &middot; OTF and TTF supported &middot; auto-converted to WOFF2
+    </div>
+  </div>
 </div>
 
-<h2>Font Families</h2>
 {% if families %}
+
+<!-- Stats Bar -->
+<div class="stats-bar animate-in">
+  <div class="stat-card">
+    <div class="stat-icon blue">&#9729;</div>
+    <div>
+      <div class="stat-value">{{ total_families }}</div>
+      <div class="stat-label">Font Families</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon purple">&#9813;</div>
+    <div>
+      <div class="stat-value">{{ families | sum(attribute='variants') }}</div>
+      <div class="stat-label">Total Variants</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon orange">&#9733;</div>
+    <div>
+      <div class="stat-value">{{ total_source }}</div>
+      <div class="stat-label">Original Size</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon green">&#9734;</div>
+    <div>
+      <div class="stat-value">{{ total_converted }}</div>
+      <div class="stat-label">Converted Size</div>
+    </div>
+  </div>
+</div>
+
+<!-- Families Grid -->
+<div class="section-header">
+  <h2>Your Fonts</h2>
+  <span class="text-muted">{{ families | length }} famil{{ 'y' if families | length == 1 else 'ies' }}</span>
+</div>
+
+<div class="family-grid">
   {% for fam in families %}
-  <div class="card">
-    <h3><a href="/font/{{ fam.name }}">{{ fam.name }}</a></h3>
-    <p>
-      {% for w in fam.weights %}
-        <span class="tag">{{ w }}</span>
-      {% endfor %}
-      {% for s in fam.styles %}
-        <span class="tag">{{ s }}</span>
-      {% endfor %}
-    </p>
-    <p class="muted">Preview and copy CSS on the detail page.</p>
+  <div class="family-card animate-in" style="animation-delay: {{ loop.index0 * 0.05 }}s">
+    
+    <button class="family-card-delete" onclick="deleteFont('{{ fam.name }}', this)" title="Delete font">
+      &#10005;
+    </button>
+
+    <!-- Live Preview -->
+    <div class="family-card-preview">
+      <div class="family-card-preview-text" style="font-family: '{{ fam.name }}', sans-serif;">
+        The quick brown fox
+      </div>
+      <div class="family-card-preview-abc" style="font-family: '{{ fam.name }}', sans-serif;">
+        ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789
+      </div>
+    </div>
+
+    <!-- Card Body -->
+    <div class="family-card-body">
+      <div class="family-card-name">
+        <a href="/font/{{ fam.name }}">{{ fam.name }}</a>
+      </div>
+
+      <div class="family-card-meta">
+        {% for w in fam.weights %}
+          <span class="tag">{{ w }}</span>
+        {% endfor %}
+        {% for s in fam.styles %}
+          <span class="tag">{{ s }}</span>
+        {% endfor %}
+        <span class="tag accent">{{ fam.variants }} variant{{ 's' if fam.variants > 1 else '' }}</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
+        <div style="flex: 1;">
+          <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); margin-bottom: 4px;">
+            <span>{{ fam.source_size }} &rarr; {{ fam.converted_size }}</span>
+            <span class="text-success">-{{ fam.savings }}%</span>
+          </div>
+          <div style="height: 4px; background: var(--surface-active); border-radius: 2px; overflow: hidden;">
+            <div style="width: {{ fam.savings }}%; height: 100%; background: linear-gradient(90deg, var(--success), var(--accent)); border-radius: 2px; transition: width 1s ease;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="family-card-actions">
+        <a href="/font/{{ fam.name }}" class="btn btn-ghost btn-sm">&#128065; Preview</a>
+        <button class="btn btn-primary btn-sm" onclick="copyText('@import url(\'{{ request.base_url }}api/font?family={{ fam.name }}\');', this)">
+          &#128203; Copy CSS
+        </button>
+      </div>
+    </div>
   </div>
   {% endfor %}
+</div>
+
 {% else %}
-  <p class="muted">No fonts uploaded yet.</p>
+
+<!-- Empty State -->
+<div class="empty-state animate-in">
+  <div class="empty-state-icon">&#128248;</div>
+  <h2>No fonts yet</h2>
+  <p>Upload your first OTF or TTF font file above. It will be automatically converted to WOFF2 and ready to serve.</p>
+</div>
+
 {% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const uploadZone = document.getElementById('upload-zone');
+  const fileInput = document.getElementById('file-input');
+
+  // Drag & drop
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    uploadZone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  });
+
+  ['dragenter', 'dragover'].forEach(eventName => {
+    uploadZone.addEventListener(eventName, () => uploadZone.classList.add('dragover'));
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    uploadZone.addEventListener(eventName, () => uploadZone.classList.remove('dragover'));
+  });
+
+  uploadZone.addEventListener('drop', (e) => {
+    const files = e.dataTransfer.files;
+    if (files.length) uploadFiles(files);
+  });
+
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length) uploadFiles(e.target.files);
+  });
+
+  async function uploadFiles(files) {
+    const validFiles = Array.from(files).filter(f => f.name.match(/\.(otf|ttf)$/i));
+    if (!validFiles.length) {
+      showToast('Please select OTF or TTF files', 'error');
+      return;
+    }
+
+    const formData = new FormData();
+    validFiles.forEach(f => formData.append('files', f));
+
+    // Show loading state
+    const title = uploadZone.querySelector('.upload-zone-title');
+    const hint = uploadZone.querySelector('.upload-zone-hint');
+    const originalTitle = title.textContent;
+    const originalHint = hint.textContent;
+    title.textContent = 'Uploading...';
+    hint.textContent = `Converting ${validFiles.length} file${validFiles.length > 1 ? 's' : ''} to WOFF2`;
+    uploadZone.style.pointerEvents = 'none';
+    uploadZone.style.opacity = '0.7';
+
+    try {
+      const resp = await fetch('/upload', { method: 'POST', body: formData });
+      if (resp.ok) {
+        showToast(`${validFiles.length} font${validFiles.length > 1 ? 's' : ''} uploaded successfully`);
+        setTimeout(() => window.location.reload(), 800);
+      } else {
+        showToast('Upload failed', 'error');
+        title.textContent = originalTitle;
+        hint.textContent = originalHint;
+        uploadZone.style.pointerEvents = '';
+        uploadZone.style.opacity = '';
+      }
+    } catch (e) {
+      showToast('Upload failed', 'error');
+      title.textContent = originalTitle;
+      hint.textContent = originalHint;
+      uploadZone.style.pointerEvents = '';
+      uploadZone.style.opacity = '';
+    }
+  }
+</script>
 {% endblock %}

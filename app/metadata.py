@@ -20,7 +20,7 @@ def save_metadata(data: dict[str, Any]) -> None:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
-def add_font_entry(family: str, weight: int, style: str, path: Path, source_file: str) -> None:
+def add_font_entry(family: str, weight: int, style: str, path: Path, source_file: str, source_size: int = 0, converted_size: int = 0) -> None:
     """Add a font entry to the metadata index."""
     data = load_metadata()
     families = data.setdefault("families", {})
@@ -30,6 +30,8 @@ def add_font_entry(family: str, weight: int, style: str, path: Path, source_file
     weight_entry[style] = {
         "path": str(path.relative_to(SERVED_DIR)),
         "source": source_file,
+        "source_size": source_size,
+        "converted_size": converted_size,
     }
     save_metadata(data)
 

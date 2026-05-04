@@ -122,7 +122,9 @@ def convert_font(source_path: Path, subset_key: str = "latin") -> Path | None:
     font.save(str(out_file))
     font.close()
 
-    add_font_entry(family_name, weight, style, out_file, source_path.name)
+    source_size = source_path.stat().st_size if source_path.exists() else 0
+    converted_size = out_file.stat().st_size if out_file.exists() else 0
+    add_font_entry(family_name, weight, style, out_file, source_path.name, source_size=source_size, converted_size=converted_size)
     return out_file
 
 
