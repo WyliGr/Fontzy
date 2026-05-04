@@ -10,6 +10,7 @@ from jinja2 import Environment, FileSystemLoader
 from app.converter import convert_font
 from app.metadata import list_families, get_family
 from app.config import INCOMING_DIR
+from app.settings import get_base_url
 
 router = APIRouter()
 
@@ -33,11 +34,20 @@ def _human_size(size_bytes: int) -> str:
     return f"{size_bytes:.1f} TB"
 
 
+def _get_base_url(request: Request) -> str:
+    """Return configured base URL or fallback to request origin."""
+    configured = get_base_url().rstrip("/")
+    if configured:
+        return configured
+    return str(request.base_url).rstrip("/")
+
+
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     families = []
     total_source = 0
     total_converted = 0
+    base_url = _get_base_url(request)
     for name in list_families():
         fam = get_family(name)
         if fam:
@@ -71,6 +81,7 @@ async def index(request: Request):
         total_families=len(families),
         total_source=_human_size(total_source),
         total_converted=_human_size(total_converted),
+        base_url=base_url,
     )
     return HTMLResponse(content=html)
 
@@ -81,9 +92,9 @@ async def font_detail(request: Request, family: str):
     if not fam:
         return RedirectResponse(url="/")
     weights = fam.get("weights", {})
-    css_url = f"/api/font?family={family}"
-    
-    # Build variant list for the template
+    base_url = _get_base_url(request)
+    css_url = f"{base_url}/api/font?family={family}"
+
     variants = []
     for w_str, styles in weights.items():
         w = int(w_str)
@@ -95,7 +106,7 @@ async def font_detail(request: Request, family: str):
                 "source_size": _human_size(info.get("source_size", 0)),
                 "converted_size": _human_size(info.get("converted_size", 0)),
             })
-    
+
     html = _render(
         "detail.html",
         request=request,
@@ -103,6 +114,7 @@ async def font_detail(request: Request, family: str):
         weights=weights,
         variants=variants,
         css_url=css_url,
+        base_url=base_url,
     )
     return HTMLResponse(content=html)
 

@@ -3,7 +3,7 @@
 {% block title %}{{ family }} | Fontzy{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="/api/font?family={{ family }}">
+<link rel="stylesheet" href="{{ base_url }}/api/font?family={{ family }}">
 {% endblock %}
 
 {% block content %}
@@ -73,7 +73,7 @@
   </div>
 
   <div class="code-block">
-    <pre>@import url('{{ request.base_url }}api/font?family={{ family }}');
+    <pre>@import url('{{ base_url }}/api/font?family={{ family }}');
 
 body {
   font-family: '{{ family }}', sans-serif;
@@ -87,7 +87,7 @@ body {
     <button
       class="tag"
       style="cursor: pointer;"
-      onclick="copyText('@import url(\'{{ request.base_url }}api/font?family={{ family }}&weight={{ v.weight }}\');', this); this.textContent='Copied!'; setTimeout(()=>this.textContent='{{ v.weight }} {{ v.style }}', 1500);"
+      onclick="copyText('@import url(\'{{ base_url }}/api/font?family={{ family }}&weight={{ v.weight }}\');', this); this.textContent='Copied!'; setTimeout(()=>this.textContent='{{ v.weight }} {{ v.style }}', 1500);"
     >
       {{ v.weight }} {{ v.style }}
     </button>

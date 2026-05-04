@@ -2,8 +2,8 @@
 
 {% block head %}
   {% for fam in families %}
-  <link rel="preload" href="/api/font?family={{ fam.name }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
-  <noscript><link rel="stylesheet" href="/api/font?family={{ fam.name }}"></noscript>
+  <link rel="preload" href="{{ base_url }}/api/font?family={{ fam.name }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="{{ base_url }}/api/font?family={{ fam.name }}"></noscript>
   {% endfor %}
 {% endblock %}
 
@@ -109,7 +109,7 @@
 
       <div class="family-card-actions">
         <a href="/font/{{ fam.name }}" class="btn btn-ghost btn-sm">&#128065; Preview</a>
-        <button class="btn btn-primary btn-sm" onclick="copyText('@import url(\'{{ request.base_url }}api/font?family={{ fam.name }}\');', this)">
+        <button class="btn btn-primary btn-sm" onclick="copyText('@import url(\'{{ base_url }}/api/font?family={{ fam.name }}\');', this)">
           &#128203; Copy CSS
         </button>
       </div>

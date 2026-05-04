@@ -733,6 +733,115 @@
     .section-header h2 {
       margin-bottom: 0;
     }
+
+    /* ===== Modal / Overlay ===== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      max-width: 520px;
+      width: 100%;
+      box-shadow: var(--shadow-lg);
+      animation: fadeIn 0.25s ease;
+    }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-header h2 {
+      margin-bottom: 0;
+      font-size: 18px;
+    }
+
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .modal-close:hover {
+      background: var(--surface-hover);
+      color: var(--text);
+    }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      transition: var(--transition);
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+
+    .form-hint {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 6px;
+    }
+
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
   </style>
   {% block head %}{% endblock %}
 </head>
@@ -748,11 +857,42 @@
           </div>
         </a>
         <div style="display: flex; gap: 8px;">
+          <button class="btn btn-ghost btn-sm" onclick="openSettings()" title="Settings">&#9881;</button>
           <a href="/" class="btn btn-ghost btn-sm">Dashboard</a>
           <a href="https://github.com" target="_blank" class="btn btn-ghost btn-sm" style="font-size: 18px;">&#9432;</a>
         </div>
       </div>
     </header>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settings-modal" onclick="closeSettingsOnBackdrop(event)">
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h2>&#9881; Settings</h2>
+          <button class="modal-close" onclick="closeSettings()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Base URL / Domain</label>
+            <input type="text" class="form-input" id="base-url-input" placeholder="https://fonts.example.com">
+            <p class="form-hint">
+              The public URL where Fontzy is accessible. Used in generated CSS @import URLs.
+              Leave empty to auto-detect from the browser.
+            </p>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Preview</label>
+            <div class="code-block" style="margin-top: 8px;">
+              <pre id="base-url-preview">@import url('https://your-domain.com/api/font?family=your-font');</pre>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="closeSettings()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveSettings()">Save</button>
+        </div>
+      </div>
+    </div>
 
     <main class="main">
       <div class="container">
@@ -816,6 +956,62 @@
         }
       } catch (e) {
         showToast('Failed to delete', 'error');
+      }
+    }
+
+    // ===== Settings Modal =====
+    let currentBaseUrl = '';
+
+    async function openSettings() {
+      try {
+        const resp = await fetch('/api/settings');
+        const data = await resp.json();
+        currentBaseUrl = data.base_url || '';
+        document.getElementById('base-url-input').value = currentBaseUrl;
+        updatePreview(currentBaseUrl);
+        document.getElementById('settings-modal').classList.add('active');
+      } catch (e) {
+        showToast('Failed to load settings', 'error');
+      }
+    }
+
+    function closeSettings() {
+      document.getElementById('settings-modal').classList.remove('active');
+    }
+
+    function closeSettingsOnBackdrop(event) {
+      if (event.target === document.getElementById('settings-modal')) {
+        closeSettings();
+      }
+    }
+
+    function updatePreview(url) {
+      const preview = document.getElementById('base-url-preview');
+      const base = url.trim() || 'https://your-domain.com';
+      preview.textContent = `@import url('${base}/api/font?family=your-font');`;
+    }
+
+    document.getElementById('base-url-input').addEventListener('input', (e) => {
+      updatePreview(e.target.value);
+    });
+
+    async function saveSettings() {
+      const url = document.getElementById('base-url-input').value.trim();
+      try {
+        const resp = await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base_url: url })
+        });
+        if (resp.ok) {
+          showToast('Settings saved');
+          closeSettings();
+          setTimeout(() => window.location.reload(), 600);
+        } else {
+          showToast('Failed to save', 'error');
+        }
+      } catch (e) {
+        showToast('Failed to save', 'error');
       }
     }
   </script>

@@ -9,6 +9,7 @@ from app.config import INCOMING_DIR, SERVED_DIR
 from app.converter import convert_font
 from app.css_generator import generate_css
 from app.metadata import remove_font_family, list_families, get_family
+from app.settings import get_base_url, set_base_url
 
 router = APIRouter(prefix="/api")
 
@@ -27,7 +28,9 @@ async def serve_font_css(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid weight parameter")
 
-    css = generate_css(family, weights=weights, style=style, base_url="/fonts")
+    configured_base = get_base_url().rstrip("/")
+    base_url = configured_base if configured_base else str(request.base_url).rstrip("/")
+    css = generate_css(family, weights=weights, style=style, base_url=f"{base_url}/fonts")
     if not css:
         raise HTTPException(status_code=404, detail="Font family not found")
 
@@ -59,7 +62,6 @@ async def upload_fonts(files: list[UploadFile] = File(...)):
         out = convert_font(dest)
         if out:
             results.append({"filename": upload.filename, "status": "converted", "path": str(out)})
-            # Clean up source after conversion
             dest.unlink(missing_ok=True)
         else:
             results.append({"filename": upload.filename, "status": "error", "reason": "Conversion failed"})
@@ -72,7 +74,6 @@ async def delete_font_family(family: str):
     if not fam:
         raise HTTPException(status_code=404, detail="Font family not found")
 
-    # Remove served files
     fam_dir = SERVED_DIR / family
     if fam_dir.exists():
         shutil.rmtree(fam_dir)
@@ -84,3 +85,16 @@ async def delete_font_family(family: str):
 @router.get("/families")
 async def list_font_families():
     return JSONResponse(content={"families": list_families()})
+
+
+@router.get("/settings")
+async def get_settings():
+    return JSONResponse(content={"base_url": get_base_url().rstrip("/")})
+
+
+@router.post("/settings")
+async def update_settings(request: Request):
+    body = await request.json()
+    url = body.get("base_url", "").strip()
+    set_base_url(url)
+    return JSONResponse(content={"base_url": url.rstrip("/")})
