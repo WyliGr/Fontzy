@@ -31,8 +31,18 @@ app.include_router(ui_router)
 ASSETS_DIR = Path(__file__).parent / "assets"
 app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
 
-# Serve converted font files with long-term caching
-static_app = StaticFiles(directory=str(SERVED_DIR))
+
+def _get_media_type(file_name: str) -> str:
+    """Return proper MIME type for font files."""
+    ext = Path(file_name).suffix.lower()
+    if ext == ".woff2":
+        return "font/woff2"
+    if ext == ".woff":
+        return "font/woff"
+    if ext in (".ttf", ".otf"):
+        return "font/ttf"
+    return "application/octet-stream"
+
 
 @app.get("/fonts/{family}/{file_name}")
 async def serve_font(family: str, file_name: str):
@@ -42,6 +52,7 @@ async def serve_font(family: str, file_name: str):
         raise HTTPException(status_code=404, detail="Font file not found")
     return FileResponse(
         str(file_path),
+        media_type=_get_media_type(file_name),
         headers={
             "Cache-Control": "public, max-age=31536000, immutable",
             "Access-Control-Allow-Origin": "*",
