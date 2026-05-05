@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 
 from fontTools.ttLib import TTFont
-from fontTools.subset import Subsetter, Options, save_font
+from fontTools.subset import Subsetter, Options
 
 from app.config import INCOMING_DIR, SERVED_DIR, SUBSETS, SUPPORTED_EXTENSIONS
 from app.metadata import add_font_entry
@@ -43,7 +43,6 @@ def _get_font_metadata(font: TTFont) -> tuple[str, int, str]:
     if "italic" in subfamily_lower:
         style = "italic"
 
-    # Parse weight from subfamily name or OS/2 table
     weight_keywords = {
         "thin": 100, "extra light": 200, "extralight": 200, "light": 300,
         "regular": 400, "normal": 400, "medium": 500,
@@ -55,7 +54,6 @@ def _get_font_metadata(font: TTFont) -> tuple[str, int, str]:
             weight = w
             break
 
-    # Override with OS/2 usWeightClass if present and sensible
     if "OS/2" in font:
         os2_weight = font["OS/2"].usWeightClass
         if 100 <= os2_weight <= 900:
@@ -65,6 +63,24 @@ def _get_font_metadata(font: TTFont) -> tuple[str, int, str]:
     return family_name, weight, style
 
 
+def _rename_font(font: TTFont, new_family: str) -> None:
+    """Update the font's name table to use the normalized family name."""
+    name_table = font["name"]
+    for record in name_table.names:
+        if record.nameID in (1, 16):
+            # Family name
+            try:
+                record.string = new_family.encode(record.getEncoding())
+            except Exception:
+                # Fallback: just set as UTF-16-BE (Windows) or UTF-8 (Mac)
+                if record.platformID == 1:
+                    record.string = new_family.encode("mac_roman")
+                elif record.platformID == 3:
+                    record.string = new_family.encode("utf_16_be")
+                else:
+                    record.string = new_family.encode("utf_8")
+
+
 def _parse_unicodes(subset_str: str) -> list[int]:
     """Parse a subset string like 'U+0000-00FF,U+0131' into a list of ints."""
     codes = []
@@ -72,7 +88,6 @@ def _parse_unicodes(subset_str: str) -> list[int]:
         part = part.strip()
         if not part:
             continue
-        # Strip U+ prefix
         if part.startswith("U+") or part.startswith("u+"):
             part = part[2:]
         if "-" in part:
@@ -94,6 +109,9 @@ def convert_font(source_path: Path, subset_key: str = "latin") -> Path | None:
         return None
 
     family_name, weight, style = _get_font_metadata(font)
+
+    # Rename font family in the file to match the normalized name
+    _rename_font(font, family_name)
 
     # Subset
     subset_codes = _parse_unicodes(SUBSETS.get(subset_key, SUBSETS["latin"]))
@@ -139,6 +157,5 @@ def scan_and_convert(subset_key: str = "latin") -> list[Path]:
             result = convert_font(path, subset_key=subset_key)
             if result:
                 converted.append(result)
-                # Optionally remove or archive the source
                 os.remove(path)
     return converted
