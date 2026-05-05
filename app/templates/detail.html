@@ -18,13 +18,13 @@
 <!-- Hero Preview -->
 <div class="preview-section">
   <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
-    <h1 style="font-family: '{{ family }}', sans-serif; margin-bottom: 0; font-size: 48px;">{{ family }}</h1>
+    <h1 style="font-family: 'Inter', sans-serif; margin-bottom: 0; font-size: 48px;" id="preview-heading">{{ family }}</h1>
     <div class="family-card-meta" style="margin-bottom: 0;">
-      {% for v in variants %}
-        <span class="tag">{{ v.weight }}</span>
+      {% for w in unique_weights %}
+        <span class="tag">{{ w }}</span>
       {% endfor %}
-      {% for s in weights.keys() | list | first | default('') %}
-        {# handled above #}
+      {% for s in unique_styles %}
+        <span class="tag">{{ s }}</span>
       {% endfor %}
       <span class="tag accent">{{ variants | length }} variant{{ 's' if variants | length > 1 else '' }}</span>
     </div>
@@ -45,7 +45,7 @@
       class="weight-pill {{ 'active' if loop.first else '' }}"
       data-weight="{{ v.weight }}"
       data-style="{{ v.style }}"
-      onclick="setWeight({{ v.weight }}, '{{ v.style }}', this)"
+      onclick="setVariant({{ v.weight }}, '{{ v.style }}', this)"
     >
       {{ v.weight }} {{ v.style }}
     </button>
@@ -89,7 +89,7 @@ body {
     <button
       class="tag"
       style="cursor: pointer;"
-      onclick="copyText('@import url(\'{{ base_url }}/api/font?family={{ family }}&weight={{ v.weight }}\');', this); this.textContent='Copied!'; setTimeout(()=>this.textContent='{{ v.weight }} {{ v.style }}', 1500);"
+      onclick="copySpecificWeight(this, '{{ base_url }}', '{{ family }}', {{ v.weight }})"
     >
       {{ v.weight }} {{ v.style }}
     </button>
@@ -121,20 +121,19 @@ body {
         <tr>
           <td>{{ v.weight }}</td>
           <td>
-            <span class="tag" style="{% if v.style == 'italic' %}background: var(--warning); color: var(--bg); border-color: var(--warning);{% endif %}">
+            <span class="tag" {% if v.style == 'italic' %}style="background: var(--warning); color: var(--bg); border-color: var(--warning);"{% endif %}>
               {{ v.style }}
             </span>
           </td>
           <td>
-            <span class="text-dim" style="font-size: 12px; font-family: 'JetBrains Mono', monospace;">{{ v.path }}</span>
+            <span class="text-dim" style="font-size: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;">{{ v.path }}</span>
           </td>
           <td class="text-muted">{{ v.source_size }}</td>
           <td class="text-muted">{{ v.converted_size }}</td>
           <td>
-            {% if v.source_size != v.converted_size %}
-              <span class="text-success">
-                -{{ ((v.source_size_bytes|default(1) - v.converted_size_bytes|default(0)) / v.source_size_bytes|default(1) * 100) | round }}%
-              </span>
+            {% if v.source_size_bytes > 0 %}
+              {% set savings = ((1 - v.converted_size_bytes / v.source_size_bytes) * 100) | round %}
+              <span class="text-success">-{{ savings }}%</span>
             {% else %}
               <span class="text-muted">-</span>
             {% endif %}
@@ -151,12 +150,12 @@ body {
   <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
     <div>
       <h3 style="color: var(--danger); margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
-        <img src="/assets/caution.svg" alt="" class="icon icon-sm" style=""> Danger Zone
+        <img src="/assets/caution.svg" alt="" class="icon icon-sm"> Danger Zone
       </h3>
       <p class="text-muted" style="font-size: 13px;">Deleting a font family removes all its variants permanently.</p>
     </div>
-    <button class="btn btn-danger" onclick="deleteFont('{{ family }}', this); window.location.href='/';">
-      <img src="/assets/trash.svg" alt="" class="icon icon-sm" style=""> Delete "{{ family }}"
+    <button class="btn btn-danger" id="delete-btn">
+      <img src="/assets/trash.svg" alt="" class="icon icon-sm"> Delete "{{ family }}"
     </button>
   </div>
 </div>
@@ -165,41 +164,102 @@ body {
 
 {% block scripts %}
 <script>
-  const previewText = document.getElementById('preview-text');
-  const sizeSlider = document.getElementById('size-slider');
-  const sizeValue = document.getElementById('size-value');
-  let currentWeight = {{ variants[0].weight if variants else 400 }};
-  let currentStyle = '{{ variants[0].style if variants else "normal" }}';
+  (function() {
+    const previewText = document.getElementById('preview-text');
+    const previewHeading = document.getElementById('preview-heading');
+    const sizeSlider = document.getElementById('size-slider');
+    const sizeValue = document.getElementById('size-value');
+    const deleteBtn = document.getElementById('delete-btn');
+    const family = '{{ family }}';
 
-  // Weight switching
-  function setWeight(weight, style, btn) {
-    currentWeight = weight;
-    currentStyle = style;
-    previewText.style.fontWeight = weight;
-    previewText.style.fontStyle = style;
+    const defaultWeight = {{ variants[0].weight if variants else 400 }};
+    const defaultStyle = '{{ variants[0].style if variants else "normal" }}';
+    let currentWeight = defaultWeight;
+    let currentStyle = defaultStyle;
 
-    document.querySelectorAll('.weight-pill').forEach(pill => {
-      pill.classList.remove('active');
+    // ---- Font Load Handling ----
+    // Wait for the detail-page font to actually load before using it
+    document.fonts.ready.then(function() {
+      if (previewText) previewText.style.fontFamily = "'" + family + "', sans-serif";
+      if (previewHeading) previewHeading.style.fontFamily = "'" + family + "', sans-serif";
     });
-    btn.classList.add('active');
-  }
 
-  // Size slider
-  sizeSlider.addEventListener('input', (e) => {
-    const size = e.target.value;
-    previewText.style.fontSize = size + 'px';
-    sizeValue.textContent = size + 'px';
-  });
+    // ---- Variant Switching ----
+    window.setVariant = function(weight, style, btn) {
+      currentWeight = weight;
+      currentStyle = style;
+      if (previewText) {
+        previewText.style.fontWeight = weight;
+        previewText.style.fontStyle = style;
+      }
+      document.querySelectorAll('.weight-pill').forEach(function(pill) {
+        pill.classList.remove('active');
+      });
+      if (btn) btn.classList.add('active');
+    };
 
-  // Auto-resize textarea
-  previewText.addEventListener('input', () => {
-    previewText.style.height = 'auto';
-    previewText.style.height = previewText.scrollHeight + 'px';
-  });
+    // ---- Size Slider ----
+    if (sizeSlider) {
+      sizeSlider.addEventListener('input', function(e) {
+        var size = e.target.value;
+        if (previewText) previewText.style.fontSize = size + 'px';
+        if (sizeValue) sizeValue.textContent = size + 'px';
+      });
+    }
 
-  // Initialize
-  previewText.style.fontFamily = "'{{ family }}', sans-serif";
-  previewText.style.fontWeight = currentWeight;
-  previewText.style.fontStyle = currentStyle;
+    // ---- Auto-resize textarea ----
+    if (previewText) {
+      previewText.addEventListener('input', function() {
+        previewText.style.height = 'auto';
+        previewText.style.height = previewText.scrollHeight + 'px';
+      });
+      // Trigger once on load
+      previewText.style.height = 'auto';
+      previewText.style.height = previewText.scrollHeight + 'px';
+    }
+
+    // ---- Copy specific weight ----
+    window.copySpecificWeight = function(btn, baseUrl, familyName, weight) {
+      var text = "@import url('" + baseUrl + "/api/font?family=" + familyName + "&weight=" + weight + "');";
+      navigator.clipboard.writeText(text).then(function() {
+        var original = btn.textContent.trim();
+        btn.textContent = 'Copied!';
+        btn.style.background = 'var(--success-dim)';
+        btn.style.borderColor = 'var(--success)';
+        btn.style.color = 'var(--success)';
+        setTimeout(function() {
+          btn.textContent = original;
+          btn.style.background = '';
+          btn.style.borderColor = '';
+          btn.style.color = '';
+        }, 1500);
+      });
+    };
+
+    // ---- Delete ----
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', async function() {
+        if (!confirm('Delete font family "' + family + '"? This cannot be undone.')) return;
+        try {
+          const resp = await fetch('/api/font/' + encodeURIComponent(family), { method: 'DELETE' });
+          if (resp.ok) {
+            showToast('"' + family + '" deleted');
+            setTimeout(function() { window.location.href = '/'; }, 600);
+          } else {
+            showToast('Failed to delete', 'error');
+          }
+        } catch (e) {
+          showToast('Failed to delete', 'error');
+        }
+      });
+    }
+
+    // ---- Initialize ----
+    if (previewText) {
+      previewText.style.fontFamily = "'Inter', sans-serif";
+      previewText.style.fontWeight = defaultWeight;
+      previewText.style.fontStyle = defaultStyle;
+    }
+  })();
 </script>
 {% endblock %}

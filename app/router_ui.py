@@ -96,15 +96,25 @@ async def font_detail(request: Request, family: str):
     css_url = f"{base_url}/api/font?family={family}"
 
     variants = []
+    unique_weights = []
+    unique_styles = []
     for w_str, styles in weights.items():
         w = int(w_str)
+        if w not in unique_weights:
+            unique_weights.append(w)
         for s, info in styles.items():
+            if s not in unique_styles:
+                unique_styles.append(s)
+            src = info.get("source_size", 0)
+            conv = info.get("converted_size", 0)
             variants.append({
                 "weight": w,
                 "style": s,
                 "path": info.get("path", ""),
-                "source_size": _human_size(info.get("source_size", 0)),
-                "converted_size": _human_size(info.get("converted_size", 0)),
+                "source_size": _human_size(src),
+                "converted_size": _human_size(conv),
+                "source_size_bytes": src,
+                "converted_size_bytes": conv,
             })
 
     html = _render(
@@ -113,6 +123,8 @@ async def font_detail(request: Request, family: str):
         family=family,
         weights=weights,
         variants=variants,
+        unique_weights=sorted(unique_weights),
+        unique_styles=sorted(unique_styles),
         css_url=css_url,
         base_url=base_url,
     )

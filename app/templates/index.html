@@ -1,25 +1,19 @@
 {% extends "base.html" %}
 
-{% block head %}
-  {% for fam in families %}
-  <link rel="stylesheet" href="{{ base_url }}/api/font?family={{ fam.name }}">
-  {% endfor %}
-{% endblock %}
-
 {% block content %}
 
 <!-- Upload Section -->
 <div class="card" style="margin-bottom: 32px;">
-  <div class="upload-zone" id="upload-zone">
+  <form class="upload-zone" id="upload-zone" method="post" action="/upload" enctype="multipart/form-data">
     <input type="file" name="files" id="file-input" multiple accept=".otf,.ttf" required>
-  <div class="upload-zone-icon">
-      <img src="/assets/upload.svg" alt="" class="icon icon-xl" style="">
+    <div class="upload-zone-icon">
+      <img src="/assets/upload.svg" alt="" class="icon icon-xl">
     </div>
     <div class="upload-zone-title">Drop font files here</div>
     <div class="upload-zone-hint">
       or click to browse &middot; OTF and TTF supported &middot; auto-converted to WOFF2
     </div>
-  </div>
+  </form>
 </div>
 
 {% if families %}
@@ -62,21 +56,23 @@
   <span class="text-muted">{{ families | length }} famil{{ 'y' if families | length == 1 else 'ies' }}</span>
 </div>
 
-<div class="family-grid">
+<div class="family-grid" id="family-grid">
   {% for fam in families %}
-  <div class="family-card animate-in" style="animation-delay: {{ loop.index0 * 0.05 }}s">
-    
+  <div class="family-card animate-in" data-family="{{ fam.name }}" style="animation-delay: {{ loop.index0 * 0.05 }}s">
     <button class="family-card-delete" onclick="deleteFont('{{ fam.name }}', this)" title="Delete font">
       <img src="/assets/trash.svg" alt="Delete" class="icon icon-sm">
     </button>
 
-    <!-- Live Preview -->
-    <div class="family-card-preview">
-      <div class="family-card-preview-text" style="font-family: '{{ fam.name }}', sans-serif;">
+    <!-- Live Preview (font loaded lazily) -->
+    <div class="family-card-preview" data-preview-family="{{ fam.name }}">
+      <div class="family-card-preview-text" style="font-family: 'Inter', sans-serif;" data-preview-text>
         The quick brown fox
       </div>
-      <div class="family-card-preview-abc" style="font-family: '{{ fam.name }}', sans-serif;">
+      <div class="family-card-preview-abc" style="font-family: 'Inter', sans-serif; opacity: 0.5;" data-preview-abc>
         ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789
+      </div>
+      <div class="family-card-preview-loading" data-preview-loading>
+        <span class="text-dim" style="font-size: 12px;">Loading preview...</span>
       </div>
     </div>
 
@@ -110,10 +106,10 @@
 
       <div class="family-card-actions">
         <a href="/font/{{ fam.name }}" class="btn btn-ghost btn-sm">
-          <img src="/assets/resize.svg" alt="" class="icon icon-sm" style=""> Preview
+          <img src="/assets/resize.svg" alt="" class="icon icon-sm"> Preview
         </a>
         <button class="btn btn-primary btn-sm" onclick="copyText('@import url(\'{{ base_url }}/api/font?family={{ fam.name }}\');', this)">
-          <img src="/assets/copy.svg" alt="" class="icon icon-sm" style=""> Copy CSS
+          <img src="/assets/copy.svg" alt="" class="icon icon-sm"> Copy CSS
         </button>
       </div>
     </div>
@@ -126,7 +122,7 @@
 <!-- Empty State -->
 <div class="empty-state animate-in">
   <div class="empty-state-icon">
-    <img src="/assets/empty.svg" alt="" class="icon icon-xl" style="">
+    <img src="/assets/empty.svg" alt="" class="icon icon-xl">
   </div>
   <h2>No fonts yet</h2>
   <p>Upload your first OTF or TTF font file above. It will be automatically converted to WOFF2 and ready to serve.</p>
@@ -138,73 +134,122 @@
 
 {% block scripts %}
 <script>
-  const uploadZone = document.getElementById('upload-zone');
-  const fileInput = document.getElementById('file-input');
+  (function() {
+    // ---- Font Lazy Loading ----
+    // We use IntersectionObserver to load font CSS only when cards are near viewport.
+    // Once the font loads, we swap the preview text from Inter (fallback) to the real font.
+    const loadedFonts = new Set();
 
-  // Drag & drop
-  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-    uploadZone.addEventListener(eventName, (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-    });
-  });
+    async function loadFontPreview(card) {
+      const family = card.dataset.family;
+      if (!family || loadedFonts.has(family)) return;
+      loadedFonts.add(family);
 
-  ['dragenter', 'dragover'].forEach(eventName => {
-    uploadZone.addEventListener(eventName, () => uploadZone.classList.add('dragover'));
-  });
+      const previewText = card.querySelector('[data-preview-text]');
+      const previewAbc = card.querySelector('[data-preview-abc]');
+      const loadingEl = card.querySelector('[data-preview-loading]');
 
-  ['dragleave', 'drop'].forEach(eventName => {
-    uploadZone.addEventListener(eventName, () => uploadZone.classList.remove('dragover'));
-  });
+      // Inject a hidden <style> with @font-face to load only this font
+      const styleId = 'font-style-' + family;
+      if (!document.getElementById(styleId)) {
+        const link = document.createElement('link');
+        link.id = styleId;
+        link.rel = 'stylesheet';
+        link.href = '{{ base_url }}/api/font?family=' + encodeURIComponent(family);
+        document.head.appendChild(link);
+      }
 
-  uploadZone.addEventListener('drop', (e) => {
-    const files = e.dataTransfer.files;
-    if (files.length) uploadFiles(files);
-  });
-
-  fileInput.addEventListener('change', (e) => {
-    if (e.target.files.length) uploadFiles(e.target.files);
-  });
-
-  async function uploadFiles(files) {
-    const validFiles = Array.from(files).filter(f => f.name.match(/\.(otf|ttf)$/i));
-    if (!validFiles.length) {
-      showToast('Please select OTF or TTF files', 'error');
-      return;
+      // Wait for font to actually load before applying it
+      try {
+        await document.fonts.load("1em '" + family + "'");
+        if (previewText) previewText.style.fontFamily = "'" + family + "', sans-serif";
+        if (previewAbc) previewAbc.style.fontFamily = "'" + family + "', sans-serif";
+        if (loadingEl) loadingEl.style.display = 'none';
+      } catch (e) {
+        // Font failed to load, keep fallback visible
+        if (loadingEl) loadingEl.innerHTML = '<span class="text-dim" style="font-size: 12px;">Preview unavailable</span>';
+      }
     }
 
-    const formData = new FormData();
-    validFiles.forEach(f => formData.append('files', f));
+    // IntersectionObserver: load font when card is within 200px of viewport
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          loadFontPreview(entry.target);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { rootMargin: '200px' });
 
-    // Show loading state
-    const title = uploadZone.querySelector('.upload-zone-title');
-    const hint = uploadZone.querySelector('.upload-zone-hint');
-    const originalTitle = title.textContent;
-    const originalHint = hint.textContent;
-    title.textContent = 'Uploading...';
-    hint.textContent = `Converting ${validFiles.length} file${validFiles.length > 1 ? 's' : ''} to WOFF2`;
-    uploadZone.style.pointerEvents = 'none';
-    uploadZone.style.opacity = '0.7';
+    document.querySelectorAll('.family-card[data-family]').forEach(card => observer.observe(card));
 
-    try {
-      const resp = await fetch('/upload', { method: 'POST', body: formData });
-      if (resp.ok) {
-        showToast(`${validFiles.length} font${validFiles.length > 1 ? 's' : ''} uploaded successfully`);
-        setTimeout(() => window.location.reload(), 800);
-      } else {
+    // ---- Upload ----
+    const uploadZone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('file-input');
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      uploadZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      uploadZone.addEventListener(eventName, () => uploadZone.classList.add('dragover'));
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      uploadZone.addEventListener(eventName, () => uploadZone.classList.remove('dragover'));
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+      const files = e.dataTransfer.files;
+      if (files.length) uploadFiles(files);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length) uploadFiles(e.target.files);
+    });
+
+    async function uploadFiles(files) {
+      const validFiles = Array.from(files).filter(f => f.name.match(/\.(otf|ttf)$/i));
+      if (!validFiles.length) {
+        showToast('Please select OTF or TTF files', 'error');
+        return;
+      }
+
+      const formData = new FormData();
+      validFiles.forEach(f => formData.append('files', f));
+
+      const title = uploadZone.querySelector('.upload-zone-title');
+      const hint = uploadZone.querySelector('.upload-zone-hint');
+      const originalTitle = title.textContent;
+      const originalHint = hint.textContent;
+      title.textContent = 'Uploading...';
+      hint.textContent = 'Converting ' + validFiles.length + ' file' + (validFiles.length > 1 ? 's' : '') + ' to WOFF2';
+      uploadZone.style.pointerEvents = 'none';
+      uploadZone.style.opacity = '0.7';
+
+      try {
+        const resp = await fetch('/upload', { method: 'POST', body: formData });
+        if (resp.ok) {
+          showToast(validFiles.length + ' font' + (validFiles.length > 1 ? 's' : '') + ' uploaded successfully');
+          setTimeout(() => window.location.reload(), 800);
+        } else {
+          showToast('Upload failed', 'error');
+          title.textContent = originalTitle;
+          hint.textContent = originalHint;
+          uploadZone.style.pointerEvents = '';
+          uploadZone.style.opacity = '';
+        }
+      } catch (e) {
         showToast('Upload failed', 'error');
         title.textContent = originalTitle;
         hint.textContent = originalHint;
         uploadZone.style.pointerEvents = '';
         uploadZone.style.opacity = '';
       }
-    } catch (e) {
-      showToast('Upload failed', 'error');
-      title.textContent = originalTitle;
-      hint.textContent = originalHint;
-      uploadZone.style.pointerEvents = '';
-      uploadZone.style.opacity = '';
     }
-  }
+  })();
 </script>
 {% endblock %}
