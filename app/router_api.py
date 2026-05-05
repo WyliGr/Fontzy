@@ -28,9 +28,7 @@ async def serve_font_css(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid weight parameter")
 
-    configured_base = get_base_url().rstrip("/")
-    base_url = configured_base if configured_base else str(request.base_url).rstrip("/")
-    css = generate_css(family, weights=weights, style=style, base_url=f"{base_url}/fonts")
+    css = generate_css(family, weights=weights, style=style, base_url="/fonts")
     if not css:
         raise HTTPException(status_code=404, detail="Font family not found")
 

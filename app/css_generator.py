@@ -4,7 +4,7 @@ from app.config import SERVED_DIR
 from app.metadata import get_family
 
 
-def generate_css(family: str, weights: list[int] | None = None, style: str | None = None, base_url: str = "") -> str:
+def generate_css(family: str, weights: list[int] | None = None, style: str | None = None, base_url: str = "/fonts") -> str:
     """Generate @font-face CSS rules for requested family."""
     family_data = get_family(family)
     if not family_data:

@@ -135,7 +135,7 @@
 
     function injectFontCss(family) {
       if (loadedFonts[family]) return loadedFonts[family];
-      var url = '{{ base_url }}/api/font?family=' + encodeURIComponent(family);
+      var url = '/api/font?family=' + encodeURIComponent(family);
       var link = document.createElement('link');
       link.rel = 'stylesheet';
       link.href = url;
