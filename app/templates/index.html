@@ -2,8 +2,7 @@
 
 {% block head %}
   {% for fam in families %}
-  <link rel="preload" href="{{ base_url }}/api/font?family={{ fam.name }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
-  <noscript><link rel="stylesheet" href="{{ base_url }}/api/font?family={{ fam.name }}"></noscript>
+  <link rel="stylesheet" href="{{ base_url }}/api/font?family={{ fam.name }}">
   {% endfor %}
 {% endblock %}
 

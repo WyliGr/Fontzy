@@ -7,8 +7,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 INCOMING_DIR = Path(os.environ.get("FONTZY_INCOMING_DIR", BASE_DIR / "fonts" / "incoming"))
 SERVED_DIR = Path(os.environ.get("FONTZY_SERVED_DIR", BASE_DIR / "fonts" / "served"))
-METADATA_FILE = Path(os.environ.get("FONTZY_METADATA_FILE", BASE_DIR / "data" / "font-metadata.json"))
-SETTINGS_FILE = Path(os.environ.get("FONTZY_SETTINGS_FILE", BASE_DIR / "data" / "fontzy-settings.json"))
+METADATA_FILE = Path(os.environ.get("FONTZY_METADATA_FILE", BASE_DIR / "fonts" / "font-metadata.json"))
+SETTINGS_FILE = Path(os.environ.get("FONTZY_SETTINGS_FILE", BASE_DIR / "fonts" / "fontzy-settings.json"))
 
 # Default subset: Latin + Latin-1 Supplement
 LATIN_SUBSET = (
