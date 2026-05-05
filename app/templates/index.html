@@ -53,7 +53,12 @@
 <!-- Families Grid -->
 <div class="section-header">
   <h2>Your Fonts</h2>
-  <span class="text-muted">{{ families | length }} famil{{ 'y' if families | length == 1 else 'ies' }}</span>
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <span class="text-muted">{{ families | length }} famil{{ 'y' if families | length == 1 else 'ies' }}</span>
+    <button class="btn btn-primary btn-sm" onclick="copyAllCss(this)">
+      <img src="/assets/copy.svg" alt="" class="icon icon-sm"> Copy All CSS
+    </button>
+  </div>
 </div>
 
 <div class="family-grid" id="family-grid">
@@ -252,6 +257,33 @@
         uploadZone.style.opacity = '';
       }
     }
+    // ---- Copy All CSS ----
+    window.copyAllCss = function(btn) {
+      var families = [];
+      document.querySelectorAll('.family-card[data-family]').forEach(function(card) {
+        families.push(card.dataset.family);
+      });
+      if (!families.length) {
+        showToast('No fonts to copy', 'error');
+        return;
+      }
+      var importLines = families.map(function(f) {
+        return "@import url('{{ base_url }}/api/font?family=" + f + "');";
+      });
+      var text = importLines.join('\n') + "\n\nbody {\n  /* choose your font-family */\n}";
+      navigator.clipboard.writeText(text).then(function() {
+        btn.classList.add('copied');
+        var original = btn.textContent;
+        btn.textContent = 'Copied!';
+        showToast(families.length + ' font CSS lines copied');
+        setTimeout(function() {
+          btn.classList.remove('copied');
+          btn.textContent = original;
+        }, 2000);
+      }).catch(function() {
+        showToast('Failed to copy', 'error');
+      });
+    };
   })();
 </script>
 {% endblock %}

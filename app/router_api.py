@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api")
 @router.get("/font", response_class=PlainTextResponse)
 async def serve_font_css(
     request: Request,
-    family: str = Query(..., description="Font family name"),
+    family: str = Query(..., description="Comma-separated font family names"),
     weight: str | None = Query(None, description="Comma-separated weights, e.g. 400,700"),
     style: str | None = Query(None, description="Font style, e.g. normal or italic"),
 ):
@@ -28,12 +28,18 @@ async def serve_font_css(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid weight parameter")
 
-    css = generate_css(family, weights=weights, style=style, base_url="/fonts")
-    if not css:
+    families = [f.strip() for f in family.split(",") if f.strip()]
+    all_css: list[str] = []
+    for fam in families:
+        css = generate_css(fam, weights=weights, style=style, base_url="/fonts")
+        if css:
+            all_css.append(css)
+
+    if not all_css:
         raise HTTPException(status_code=404, detail="Font family not found")
 
     return PlainTextResponse(
-        content=css,
+        content="\n\n".join(all_css),
         media_type="text/css",
         headers={
             "Cache-Control": "public, max-age=3600",
