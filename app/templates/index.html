@@ -63,16 +63,13 @@
       <img src="/assets/trash.svg" alt="Delete" class="icon icon-sm">
     </button>
 
-    <!-- Live Preview (font loaded lazily) -->
-    <div class="family-card-preview" data-preview-family="{{ fam.name }}">
-      <div class="family-card-preview-text" style="font-family: 'Inter', sans-serif;" data-preview-text>
+    <!-- Live Preview -->
+    <div class="family-card-preview">
+      <div class="family-card-preview-text" data-preview-text data-family="{{ fam.name }}">
         The quick brown fox
       </div>
-      <div class="family-card-preview-abc" style="font-family: 'Inter', sans-serif; opacity: 0.5;" data-preview-abc>
+      <div class="family-card-preview-abc" data-preview-abc data-family="{{ fam.name }}">
         ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789
-      </div>
-      <div class="family-card-preview-loading" data-preview-loading>
-        <span class="text-dim" style="font-size: 12px;">Loading preview...</span>
       </div>
     </div>
 
@@ -114,8 +111,7 @@
       </div>
     </div>
   </div>
-  {% endfor %}
-</div>
+  {% endfor %}</div>
 
 {% else %}
 
@@ -135,106 +131,112 @@
 {% block scripts %}
 <script>
   (function() {
-    // ---- Font Lazy Loading ----
-    // We use IntersectionObserver to load font CSS only when cards are near viewport.
-    // Once the font loads, we swap the preview text from Inter (fallback) to the real font.
-    const loadedFonts = new Set();
+    var loadedFonts = {};
 
-    async function loadFontPreview(card) {
-      const family = card.dataset.family;
-      if (!family || loadedFonts.has(family)) return;
-      loadedFonts.add(family);
-
-      const previewText = card.querySelector('[data-preview-text]');
-      const previewAbc = card.querySelector('[data-preview-abc]');
-      const loadingEl = card.querySelector('[data-preview-loading]');
-
-      // Inject a hidden <style> with @font-face to load only this font
-      const styleId = 'font-style-' + family;
-      if (!document.getElementById(styleId)) {
-        const link = document.createElement('link');
-        link.id = styleId;
-        link.rel = 'stylesheet';
-        link.href = '{{ base_url }}/api/font?family=' + encodeURIComponent(family);
-        document.head.appendChild(link);
-      }
-
-      // Wait for font to actually load before applying it
-      try {
-        await document.fonts.load("1em '" + family + "'");
-        if (previewText) previewText.style.fontFamily = "'" + family + "', sans-serif";
-        if (previewAbc) previewAbc.style.fontFamily = "'" + family + "', sans-serif";
-        if (loadingEl) loadingEl.style.display = 'none';
-      } catch (e) {
-        // Font failed to load, keep fallback visible
-        if (loadingEl) loadingEl.innerHTML = '<span class="text-dim" style="font-size: 12px;">Preview unavailable</span>';
-      }
+    function injectFontCss(family) {
+      if (loadedFonts[family]) return loadedFonts[family];
+      var url = '{{ base_url }}/api/font?family=' + encodeURIComponent(family);
+      var link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = url;
+      document.head.appendChild(link);
+      // Return a promise that resolves when CSS is loaded
+      var p = new Promise(function(resolve, reject) {
+        link.onload = function() { resolve(); };
+        link.onerror = function() { reject(); };
+      });
+      loadedFonts[family] = p;
+      return p;
     }
 
-    // IntersectionObserver: load font when card is within 200px of viewport
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
+    function activatePreview(card) {
+      var family = card.dataset.family;
+      if (!family) return;
+      var texts = card.querySelectorAll('[data-preview-text], [data-preview-abc]');
+      injectFontCss(family).then(function() {
+        // CSS loaded — set font-family. Browser will swap via font-display: swap
+        texts.forEach(function(el) {
+          el.style.fontFamily = "'" + family + "', sans-serif";
+        });
+      }).catch(function() {
+        // CSS failed to load — keep system fallback, dim the text
+        texts.forEach(function(el) {
+          el.style.opacity = '0.5';
+        });
+      });
+    }
+
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
         if (entry.isIntersecting) {
-          loadFontPreview(entry.target);
+          activatePreview(entry.target);
           observer.unobserve(entry.target);
         }
       });
     }, { rootMargin: '200px' });
 
-    document.querySelectorAll('.family-card[data-family]').forEach(card => observer.observe(card));
+    document.querySelectorAll('.family-card[data-family]').forEach(function(card) {
+      observer.observe(card);
+    });
 
     // ---- Upload ----
-    const uploadZone = document.getElementById('upload-zone');
-    const fileInput = document.getElementById('file-input');
+    var uploadZone = document.getElementById('upload-zone');
+    var fileInput = document.getElementById('file-input');
 
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-      uploadZone.addEventListener(eventName, (e) => {
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function(eventName) {
+      uploadZone.addEventListener(eventName, function(e) {
         e.preventDefault();
         e.stopPropagation();
       });
     });
 
-    ['dragenter', 'dragover'].forEach(eventName => {
-      uploadZone.addEventListener(eventName, () => uploadZone.classList.add('dragover'));
+    ['dragenter', 'dragover'].forEach(function(eventName) {
+      uploadZone.addEventListener(eventName, function() {
+        uploadZone.classList.add('dragover');
+      });
     });
 
-    ['dragleave', 'drop'].forEach(eventName => {
-      uploadZone.addEventListener(eventName, () => uploadZone.classList.remove('dragover'));
+    ['dragleave', 'drop'].forEach(function(eventName) {
+      uploadZone.addEventListener(eventName, function() {
+        uploadZone.classList.remove('dragover');
+      });
     });
 
-    uploadZone.addEventListener('drop', (e) => {
-      const files = e.dataTransfer.files;
+    uploadZone.addEventListener('drop', function(e) {
+      var files = e.dataTransfer.files;
       if (files.length) uploadFiles(files);
     });
 
-    fileInput.addEventListener('change', (e) => {
+    fileInput.addEventListener('change', function(e) {
       if (e.target.files.length) uploadFiles(e.target.files);
     });
 
     async function uploadFiles(files) {
-      const validFiles = Array.from(files).filter(f => f.name.match(/\.(otf|ttf)$/i));
+      var validFiles = Array.from(files).filter(function(f) {
+        return f.name.match(/\.(otf|ttf)$/i);
+      });
       if (!validFiles.length) {
         showToast('Please select OTF or TTF files', 'error');
         return;
       }
 
-      const formData = new FormData();
-      validFiles.forEach(f => formData.append('files', f));
+      var formData = new FormData();
+      validFiles.forEach(function(f) { formData.append('files', f); });
 
-      const title = uploadZone.querySelector('.upload-zone-title');
-      const hint = uploadZone.querySelector('.upload-zone-hint');
-      const originalTitle = title.textContent;
-      const originalHint = hint.textContent;
+      var title = uploadZone.querySelector('.upload-zone-title');
+      var hint = uploadZone.querySelector('.upload-zone-hint');
+      var originalTitle = title.textContent;
+      var originalHint = hint.textContent;
       title.textContent = 'Uploading...';
       hint.textContent = 'Converting ' + validFiles.length + ' file' + (validFiles.length > 1 ? 's' : '') + ' to WOFF2';
       uploadZone.style.pointerEvents = 'none';
       uploadZone.style.opacity = '0.7';
 
       try {
-        const resp = await fetch('/upload', { method: 'POST', body: formData });
+        var resp = await fetch('/upload', { method: 'POST', body: formData });
         if (resp.ok) {
           showToast(validFiles.length + ' font' + (validFiles.length > 1 ? 's' : '') + ' uploaded successfully');
-          setTimeout(() => window.location.reload(), 800);
+          setTimeout(function() { window.location.reload(); }, 800);
         } else {
           showToast('Upload failed', 'error');
           title.textContent = originalTitle;

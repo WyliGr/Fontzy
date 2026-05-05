@@ -18,7 +18,7 @@
 <!-- Hero Preview -->
 <div class="preview-section">
   <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
-    <h1 style="font-family: 'Inter', sans-serif; margin-bottom: 0; font-size: 48px;" id="preview-heading">{{ family }}</h1>
+    <h1 style="font-family: 'adwaita-sans', sans-serif; margin-bottom: 0; font-size: 48px;">{{ family }}</h1>
     <div class="family-card-meta" style="margin-bottom: 0;">
       {% for w in unique_weights %}
         <span class="tag">{{ w }}</span>
@@ -36,6 +36,7 @@
     id="preview-text"
     placeholder="Type to preview the font..."
     spellcheck="false"
+    style="font-family: 'adwaita-sans', sans-serif;"
   >The quick brown fox jumps over the lazy dog.</textarea>
 
   <!-- Weight Selector -->
@@ -165,29 +166,17 @@ body {
 {% block scripts %}
 <script>
   (function() {
-    const previewText = document.getElementById('preview-text');
-    const previewHeading = document.getElementById('preview-heading');
-    const sizeSlider = document.getElementById('size-slider');
-    const sizeValue = document.getElementById('size-value');
-    const deleteBtn = document.getElementById('delete-btn');
-    const family = '{{ family }}';
+    var previewText = document.getElementById('preview-text');
+    var sizeSlider = document.getElementById('size-slider');
+    var sizeValue = document.getElementById('size-value');
+    var deleteBtn = document.getElementById('delete-btn');
+    var family = '{{ family }}';
 
-    const defaultWeight = {{ variants[0].weight if variants else 400 }};
-    const defaultStyle = '{{ variants[0].style if variants else "normal" }}';
-    let currentWeight = defaultWeight;
-    let currentStyle = defaultStyle;
-
-    // ---- Font Load Handling ----
-    // Wait for the detail-page font to actually load before using it
-    document.fonts.ready.then(function() {
-      if (previewText) previewText.style.fontFamily = "'" + family + "', sans-serif";
-      if (previewHeading) previewHeading.style.fontFamily = "'" + family + "', sans-serif";
-    });
+    var defaultWeight = {{ variants[0].weight if variants else 400 }};
+    var defaultStyle = '{{ variants[0].style if variants else "normal" }}';
 
     // ---- Variant Switching ----
     window.setVariant = function(weight, style, btn) {
-      currentWeight = weight;
-      currentStyle = style;
       if (previewText) {
         previewText.style.fontWeight = weight;
         previewText.style.fontStyle = style;
@@ -213,7 +202,6 @@ body {
         previewText.style.height = 'auto';
         previewText.style.height = previewText.scrollHeight + 'px';
       });
-      // Trigger once on load
       previewText.style.height = 'auto';
       previewText.style.height = previewText.scrollHeight + 'px';
     }
@@ -241,7 +229,7 @@ body {
       deleteBtn.addEventListener('click', async function() {
         if (!confirm('Delete font family "' + family + '"? This cannot be undone.')) return;
         try {
-          const resp = await fetch('/api/font/' + encodeURIComponent(family), { method: 'DELETE' });
+          var resp = await fetch('/api/font/' + encodeURIComponent(family), { method: 'DELETE' });
           if (resp.ok) {
             showToast('"' + family + '" deleted');
             setTimeout(function() { window.location.href = '/'; }, 600);
@@ -252,13 +240,6 @@ body {
           showToast('Failed to delete', 'error');
         }
       });
-    }
-
-    // ---- Initialize ----
-    if (previewText) {
-      previewText.style.fontFamily = "'Inter', sans-serif";
-      previewText.style.fontWeight = defaultWeight;
-      previewText.style.fontStyle = defaultStyle;
     }
   })();
 </script>
