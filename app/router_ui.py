@@ -65,6 +65,7 @@ async def index(request: Request):
             total_source += fam_source
             total_converted += fam_converted
             savings = round((1 - fam_converted / fam_source) * 100) if fam_source > 0 else 0
+            variable_axes = fam.get("variable_axes")
             families.append({
                 "name": name,
                 "weights": sorted([int(w) for w in weights.keys()]),
@@ -73,6 +74,8 @@ async def index(request: Request):
                 "source_size": _human_size(fam_source),
                 "converted_size": _human_size(fam_converted),
                 "savings": savings,
+                "is_variable": bool(variable_axes),
+                "variable_axes": variable_axes,
             })
     html = _render(
         "index.html",
@@ -125,6 +128,7 @@ async def font_detail(request: Request, family: str):
         variants=variants,
         unique_weights=sorted(unique_weights),
         unique_styles=sorted(unique_styles),
+        variable_axes=fam.get("variable_axes"),
         css_url=css_url,
         base_url=base_url,
     )

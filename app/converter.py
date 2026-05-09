@@ -16,8 +16,8 @@ def _normalize_name(name: str) -> str:
     return re.sub(r"[\s_]+", "-", name.strip()).lower()
 
 
-def _get_font_metadata(font: TTFont) -> tuple[str, int, str]:
-    """Extract (family_name, weight, style) from font tables."""
+def _get_font_metadata(font: TTFont) -> tuple[str, int, str, list[dict] | None]:
+    """Extract (family_name, weight, style, variable_axes) from font tables."""
     name_table = font["name"]
     family_name = None
     subfamily_name = None
@@ -59,8 +59,26 @@ def _get_font_metadata(font: TTFont) -> tuple[str, int, str]:
         if 100 <= os2_weight <= 900:
             weight = os2_weight
 
+    # Check for variable font axes
+    variable_axes = None
+    if "fvar" in font:
+        fvar = font["fvar"]
+        variable_axes = []
+        for axis in fvar.axes:
+            variable_axes.append({
+                "tag": axis.axisTag,
+                "min": axis.minValue,
+                "default": axis.defaultValue,
+                "max": axis.maxValue,
+            })
+        # Override weight with the wght axis range if present
+        for axis in variable_axes:
+            if axis["tag"] == "wght":
+                weight = int(axis["default"])
+                break
+
     family_name = _normalize_name(family_name)
-    return family_name, weight, style
+    return family_name, weight, style, variable_axes
 
 
 def _rename_font(font: TTFont, new_family: str) -> None:
@@ -108,7 +126,7 @@ def convert_font(source_path: Path, subset_key: str = "latin") -> Path | None:
     except Exception:
         return None
 
-    family_name, weight, style = _get_font_metadata(font)
+    family_name, weight, style, variable_axes = _get_font_metadata(font)
 
     # Rename font family in the file to match the normalized name
     _rename_font(font, family_name)
@@ -142,7 +160,7 @@ def convert_font(source_path: Path, subset_key: str = "latin") -> Path | None:
 
     source_size = source_path.stat().st_size if source_path.exists() else 0
     converted_size = out_file.stat().st_size if out_file.exists() else 0
-    add_font_entry(family_name, weight, style, out_file, source_path.name, source_size=source_size, converted_size=converted_size)
+    add_font_entry(family_name, weight, style, out_file, source_path.name, source_size=source_size, converted_size=converted_size, variable_axes=variable_axes)
     return out_file
 
 

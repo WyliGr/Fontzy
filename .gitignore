@@ -9,3 +9,4 @@ fonts/served/*
 !fonts/served/.gitkeep
 font-metadata.json
 .venv
+*.ttf

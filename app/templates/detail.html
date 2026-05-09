@@ -20,9 +20,16 @@
   <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
     <h1 style="font-family: '{{ family }}', sans-serif; margin-bottom: 0; font-size: 48px;">{{ family }}</h1>
     <div class="family-card-meta" style="margin-bottom: 0;">
-      {% for w in unique_weights %}
-        <span class="tag">{{ w }}</span>
-      {% endfor %}
+      {% if variable_axes %}
+        <span class="tag accent">Variable</span>
+        {% for axis in variable_axes %}
+          <span class="tag" title="{{ axis.tag }} axis range">{{ axis.tag }} {{ axis.min|round }}–{{ axis.max|round }}</span>
+        {% endfor %}
+      {% else %}
+        {% for w in unique_weights %}
+          <span class="tag">{{ w }}</span>
+        {% endfor %}
+      {% endif %}
       {% for s in unique_styles %}
         <span class="tag">{{ s }}</span>
       {% endfor %}
@@ -41,16 +48,34 @@
 
   <!-- Weight Selector -->
   <div class="preview-weights" id="weight-selector">
-    {% for v in variants %}
-    <button
-      class="weight-pill {{ 'active' if loop.first else '' }}"
-      data-weight="{{ v.weight }}"
-      data-style="{{ v.style }}"
-      onclick="setVariant({{ v.weight }}, '{{ v.style }}', this)"
-    >
-      {{ v.weight }} {{ v.style }}
-    </button>
-    {% endfor %}
+    {% if variable_axes %}
+      {% set wght = variable_axes | selectattr('tag', 'equalto', 'wght') | list | first %}
+      {% if wght %}
+      <div style="display: flex; align-items: center; gap: 12px; width: 100%;">
+        <span class="text-dim" style="font-size: 13px;">Weight:</span>
+        <input
+          type="range"
+          id="var-weight-slider"
+          min="{{ wght.min|round }}"
+          max="{{ wght.max|round }}"
+          value="{{ wght.default|round }}"
+          style="flex: 1; accent-color: var(--accent);"
+        >
+        <span id="var-weight-value" class="text-dim" style="font-size: 13px; min-width: 50px; text-align: right;">{{ wght.default|round }}</span>
+      </div>
+      {% endif %}
+    {% else %}
+      {% for v in variants %}
+      <button
+        class="weight-pill {{ 'active' if loop.first else '' }}"
+        data-weight="{{ v.weight }}"
+        data-style="{{ v.style }}"
+        onclick="setVariant({{ v.weight }}, '{{ v.style }}', this)"
+      >
+        {{ v.weight }} {{ v.style }}
+      </button>
+      {% endfor %}
+    {% endif %}
   </div>
 
   <!-- Size Slider -->
@@ -186,6 +211,20 @@ body {
       });
       if (btn) btn.classList.add('active');
     };
+
+    // ---- Variable Font Weight Slider ----
+    var varWeightSlider = document.getElementById('var-weight-slider');
+    var varWeightValue = document.getElementById('var-weight-value');
+    if (varWeightSlider) {
+      varWeightSlider.addEventListener('input', function(e) {
+        var w = e.target.value;
+        if (previewText) {
+          previewText.style.fontVariationSettings = "'wght' " + w;
+          previewText.style.fontWeight = w;
+        }
+        if (varWeightValue) varWeightValue.textContent = w;
+      });
+    }
 
     // ---- Size Slider ----
     if (sizeSlider) {

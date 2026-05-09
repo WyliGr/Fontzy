@@ -85,6 +85,9 @@
       </div>
 
       <div class="family-card-meta">
+        {% if fam.is_variable %}
+          <span class="tag accent">Variable</span>
+        {% endif %}
         {% for w in fam.weights %}
           <span class="tag">{{ w }}</span>
         {% endfor %}
