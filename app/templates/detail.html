@@ -27,13 +27,13 @@
         {% endfor %}
       {% else %}
         {% for w in unique_weights %}
-          <span class="tag">{{ w }}</span>
+          <span class="tag font-mono">{{ w }}</span>
         {% endfor %}
       {% endif %}
       {% for s in unique_styles %}
         <span class="tag">{{ s }}</span>
       {% endfor %}
-      <span class="tag accent">{{ variants | length }} variant{{ 's' if variants | length > 1 else '' }}</span>
+      <span class="tag accent font-mono">{{ variants | length }} variant{{ 's' if variants | length > 1 else '' }}</span>
     </div>
   </div>
 
@@ -52,7 +52,7 @@
       {% set wght = variable_axes | selectattr('tag', 'equalto', 'wght') | list | first %}
       {% if wght %}
       <div style="display: flex; align-items: center; gap: 12px; width: 100%;">
-        <span class="text-dim" style="font-size: 13px;">Weight:</span>
+        <span class="text-muted" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;">Weight</span>
         <input
           type="range"
           id="var-weight-slider"
@@ -61,7 +61,7 @@
           value="{{ wght.default|round }}"
           style="flex: 1; accent-color: var(--accent);"
         >
-        <span id="var-weight-value" class="text-dim" style="font-size: 13px; min-width: 50px; text-align: right;">{{ wght.default|round }}</span>
+        <span id="var-weight-value" class="font-mono text-muted" style="font-size: 13px; min-width: 50px; text-align: right;">{{ wght.default|round }}</span>
       </div>
       {% endif %}
     {% else %}
@@ -80,7 +80,7 @@
 
   <!-- Size Slider -->
   <div style="display: flex; align-items: center; gap: 12px; margin-top: 16px;">
-    <span class="text-dim" style="font-size: 13px;">Size:</span>
+    <span class="text-muted" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;">Size</span>
     <input
       type="range"
       id="size-slider"
@@ -89,17 +89,18 @@
       value="40"
       style="flex: 1; accent-color: var(--accent);"
     >
-    <span id="size-value" class="text-dim" style="font-size: 13px; min-width: 40px; text-align: right;">40px</span>
+    <span id="size-value" class="font-mono text-muted" style="font-size: 13px; min-width: 40px; text-align: right;">40px</span>
   </div>
 </div>
 
 <!-- CSS Import -->
-<div class="card" style="margin-bottom: 24px;">
-  <div class="section-header" style="margin-bottom: 12px;">
-    <h3><img src="/assets/copy.svg" alt="" class="icon icon-sm" style="vertical-align: middle; margin-right: 6px;"> CSS @import</h3>
-    <span class="text-muted" style="font-size: 13px;">Paste this into your stylesheet</span>
-  </div>
+<div class="section-header" style="margin-bottom: 12px;">
+  <span class="section-eyebrow">Integration</span>
+  <h2 class="section-title">CSS @import</h2>
+  <span class="section-meta">Paste this into your stylesheet</span>
+</div>
 
+<div class="card" style="margin-bottom: 32px;">
   <div class="code-block">
     <pre>@import url('{{ base_url }}/api/font?family={{ family }}');
 
@@ -109,11 +110,11 @@ body {
     <button class="copy-btn" onclick="copyText(this.closest('.code-block').querySelector('pre').textContent, this)">Copy</button>
   </div>
 
-  <div style="margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
-    <span class="text-muted" style="font-size: 13px;">Specific weight:</span>
+  <div style="margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+    <span class="text-muted" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;">Specific weight</span>
     {% for v in variants %}
     <button
-      class="tag"
+      class="tag font-mono"
       style="cursor: pointer;"
       onclick="copySpecificWeight(this, '{{ base_url }}', '{{ family }}', {{ v.weight }})"
     >
@@ -124,12 +125,13 @@ body {
 </div>
 
 <!-- Variants Table -->
-<div class="card" style="margin-bottom: 24px;">
-  <div class="section-header" style="margin-bottom: 12px;">
-    <h3><img src="/assets/variant.svg" alt="" class="icon icon-sm" style="vertical-align: middle; margin-right: 6px;"> Font Variants</h3>
-    <span class="text-muted" style="font-size: 13px;">Details for each weight and style</span>
-  </div>
+<div class="section-header" style="margin-bottom: 12px;">
+  <span class="section-eyebrow">Details</span>
+  <h2 class="section-title">Font Variants</h2>
+  <span class="section-meta">Size data for each weight and style</span>
+</div>
 
+<div class="card" style="margin-bottom: 32px;">
   <div style="overflow-x: auto;">
     <table class="data-table">
       <thead>
@@ -145,21 +147,21 @@ body {
       <tbody>
         {% for v in variants %}
         <tr>
-          <td>{{ v.weight }}</td>
+          <td class="font-mono">{{ v.weight }}</td>
           <td>
-            <span class="tag" {% if v.style == 'italic' %}style="background: var(--warning); color: var(--bg); border-color: var(--warning);"{% endif %}>
+            <span class="tag" {% if v.style == 'italic' %}style="background: rgba(251, 191, 36, 0.12); color: var(--warning); border-color: var(--warning);"{% endif %}>
               {{ v.style }}
             </span>
           </td>
           <td>
-            <span class="text-dim" style="font-size: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;">{{ v.path }}</span>
+            <span class="text-faint font-mono" style="font-size: 12px;">{{ v.path }}</span>
           </td>
-          <td class="text-muted">{{ v.source_size }}</td>
-          <td class="text-muted">{{ v.converted_size }}</td>
+          <td class="text-muted font-mono">{{ v.source_size }}</td>
+          <td class="text-muted font-mono">{{ v.converted_size }}</td>
           <td>
             {% if v.source_size_bytes > 0 %}
               {% set savings = ((1 - v.converted_size_bytes / v.source_size_bytes) * 100) | round %}
-              <span class="text-success">-{{ savings }}%</span>
+              <span class="text-success font-mono">-{{ savings }}%</span>
             {% else %}
               <span class="text-muted">-</span>
             {% endif %}
@@ -172,16 +174,19 @@ body {
 </div>
 
 <!-- Delete -->
-<div class="card" style="border-color: var(--danger-dim);">
+<div class="section-header" style="margin-bottom: 12px;">
+  <span class="section-eyebrow" style="color: var(--error);">Caution</span>
+  <h2 class="section-title">Danger Zone</h2>
+</div>
+
+<div class="card" style="border-color: var(--error); margin-bottom: 32px;">
   <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
     <div>
-      <h3 style="color: var(--danger); margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
-        <img src="/assets/caution.svg" alt="" class="icon icon-sm"> Danger Zone
-      </h3>
-      <p class="text-muted" style="font-size: 13px;">Deleting a font family removes all its variants permanently.</p>
+      <h3 style="color: var(--error); margin-bottom: 4px;">Delete family</h3>
+      <p class="text-muted" style="font-size: 13px;">Deleting "{{ family }}" removes all its variants permanently.</p>
     </div>
     <button class="btn btn-danger" id="delete-btn">
-      <img src="/assets/trash.svg" alt="" class="icon icon-sm"> Delete "{{ family }}"
+      <img src="/assets/trash.svg" alt="" class="icon icon-sm"> Delete
     </button>
   </div>
 </div>
@@ -251,7 +256,7 @@ body {
       navigator.clipboard.writeText(text).then(function() {
         var original = btn.textContent.trim();
         btn.textContent = 'Copied!';
-        btn.style.background = 'var(--success-dim)';
+        btn.style.background = 'rgba(52, 211, 153, 0.12)';
         btn.style.borderColor = 'var(--success)';
         btn.style.color = 'var(--success)';
         setTimeout(function() {

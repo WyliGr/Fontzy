@@ -3,7 +3,7 @@
 {% block content %}
 
 <!-- Upload Section -->
-<div class="card" style="margin-bottom: 32px;">
+<section style="margin-bottom: 32px;">
   <form class="upload-zone" id="upload-zone" method="post" action="/upload" enctype="multipart/form-data">
     <input type="file" name="files" id="file-input" multiple accept=".otf,.ttf" required>
     <div class="upload-zone-icon">
@@ -14,47 +14,47 @@
       or click to browse &middot; OTF and TTF supported &middot; auto-converted to WOFF2
     </div>
   </form>
-</div>
+</section>
 
 {% if families %}
 
 <!-- Stats Bar -->
 <div class="stats-bar animate-in">
   <div class="stat-card">
-    <div class="stat-icon blue"><img src="/assets/cloud.svg" alt="" class="icon icon-lg"></div>
+    <div class="stat-icon"><img src="/assets/cloud.svg" alt="" class="icon icon-lg"></div>
     <div>
-      <div class="stat-value">{{ total_families }}</div>
+      <div class="stat-value font-mono">{{ total_families }}</div>
       <div class="stat-label">Font Families</div>
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon purple"><img src="/assets/variant.svg" alt="" class="icon icon-lg"></div>
+    <div class="stat-icon"><img src="/assets/variant.svg" alt="" class="icon icon-lg"></div>
     <div>
-      <div class="stat-value">{{ families | sum(attribute='variants') }}</div>
+      <div class="stat-value font-mono">{{ families | sum(attribute='variants') }}</div>
       <div class="stat-label">Total Variants</div>
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon orange"><img src="/assets/weight.svg" alt="" class="icon icon-lg"></div>
+    <div class="stat-icon"><img src="/assets/weight.svg" alt="" class="icon icon-lg"></div>
     <div>
-      <div class="stat-value">{{ total_source }}</div>
+      <div class="stat-value font-mono">{{ total_source }}</div>
       <div class="stat-label">Original Size</div>
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon green"><img src="/assets/resize.svg" alt="" class="icon icon-lg"></div>
+    <div class="stat-icon"><img src="/assets/resize.svg" alt="" class="icon icon-lg"></div>
     <div>
-      <div class="stat-value">{{ total_converted }}</div>
+      <div class="stat-value font-mono">{{ total_converted }}</div>
       <div class="stat-label">Converted Size</div>
     </div>
   </div>
 </div>
 
 <!-- Families Grid -->
-<div class="section-header">
-  <h2>Your Fonts</h2>
+<div class="section-header" style="flex-direction: row; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+  <h2 style="margin-bottom: 0;">Your Fonts</h2>
   <div style="display: flex; align-items: center; gap: 12px;">
-    <span class="text-muted">{{ families | length }} famil{{ 'y' if families | length == 1 else 'ies' }}</span>
+    <span class="section-meta">{{ families | length }} famil{{ 'y' if families | length == 1 else 'ies' }}</span>
     <button class="btn btn-primary btn-sm" onclick="copyAllCss(this)">
       <img src="/assets/copy.svg" alt="" class="icon icon-sm"> Copy All CSS
     </button>
@@ -99,12 +99,12 @@
 
       <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
         <div style="flex: 1;">
-          <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-dim); margin-bottom: 4px;">
-            <span>{{ fam.source_size }} &rarr; {{ fam.converted_size }}</span>
-            <span class="text-success">-{{ fam.savings }}%</span>
+          <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">
+            <span class="font-mono">{{ fam.source_size }} &rarr; {{ fam.converted_size }}</span>
+            <span class="text-success font-mono">-{{ fam.savings }}%</span>
           </div>
-          <div style="height: 4px; background: var(--surface-active); border-radius: 2px; overflow: hidden;">
-            <div style="width: {{ fam.savings }}%; height: 100%; background: linear-gradient(90deg, var(--text-dim), var(--text-muted)); border-radius: 2px; transition: width 1s ease;"></div>
+          <div style="height: 6px; background: var(--surface-hover); border-radius: 3px; overflow: hidden;">
+            <div style="width: {{ fam.savings }}%; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-bright)); border-radius: 3px; transition: width 1s ease;"></div>
           </div>
         </div>
       </div>
